@@ -74,6 +74,20 @@ Newest first. One entry per decision: date, what was decided, why.
 - **Local data (gitignored):** SQLite at `data/smartcrate.db`, audio in
   `downloads/`, personal seeds in `config/seeds.json`.
 - **External binaries:** downloads need `yt-dlp` + `ffmpeg` on PATH (MP3 320k).
+- **`node:sqlite` typing gotcha:** `stmt.all()` returns `Record<string, SQLOutputValue>[]`;
+  casting straight to a row type fails `tsc` (TS2352) — bridge via `as unknown as Row[]`.
+  (`.get()` casts are usually fine.)
+- **Test glob gotcha:** the backend test script quotes the pattern
+  (`tsx --test "src/**/*.test.ts"`) so Node's runner does the recursive glob —
+  unquoted, the shell expands `**` as `*` and skips root-level `*.test.ts`.
+- **Relative `dbPath`/`downloadDir`** resolve against the process CWD, which is the
+  workspace dir (`backend/`) when launched via the npm workspace script — set
+  `SMARTCRATE_DB_PATH` to pin it elsewhere.
+- **Verification status:** backend has 20 passing `node:test` unit tests
+  (persistence, Discogs w/ stubbed fetch, scoring, recommender, downloads w/ fake
+  runner, API via fastify inject); frontend typechecks + builds. **Live e2e
+  (real Discogs token + `yt-dlp`/`ffmpeg`) is the remaining manual step** —
+  tasks 9.1/9.2.
 
 ---
 
