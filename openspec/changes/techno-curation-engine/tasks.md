@@ -53,11 +53,11 @@
 
 ## 8. Frontend curation player (`curation-player`)
 
-- [ ] 8.1 Integrate the YouTube IFrame Player API and an embedded player component
-- [ ] 8.2 Implement Play to start the session; handle empty-queue state with a seed/refill prompt
-- [ ] 8.3 Implement play/pause and like / dislike / skip controls wired to the API
-- [ ] 8.4 Implement auto-advance on track end and the queue-exhausted state
-- [ ] 8.5 Show current track metadata, its "why" reason, and basic download-queue status
+- [x] 8.1 Integrate the YouTube IFrame Player API and an embedded player component
+- [x] 8.2 Implement Play to start the session; handle empty-queue state with a seed/refill prompt
+- [x] 8.3 Implement play/pause and like / dislike / skip controls wired to the API
+- [x] 8.4 Implement auto-advance on track end and the queue-exhausted state
+- [x] 8.5 Show current track metadata, its "why" reason, and basic download-queue status
 
 ## 9. End-to-end verification
 
