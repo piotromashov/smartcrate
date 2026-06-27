@@ -47,25 +47,36 @@ function loadSeeds(path: string): SeedConfig {
   }
 }
 
+/** Treat empty/whitespace env values (e.g. from copying .env.example) as unset. */
+function str(v: string | undefined): string | undefined {
+  return v && v.trim() !== '' ? v : undefined;
+}
+function num(v: string | undefined, fallback: number): number {
+  const s = str(v);
+  if (s === undefined) return fallback;
+  const n = Number(s);
+  return Number.isNaN(n) ? fallback : n;
+}
+
 export function loadConfig(): Config {
   const env = process.env;
   return {
-    port: Number(env.PORT ?? 4321),
-    dbPath: env.SMARTCRATE_DB_PATH ?? join(REPO_ROOT, 'data/smartcrate.db'),
-    downloadDir: env.SMARTCRATE_DOWNLOAD_DIR ?? join(REPO_ROOT, 'downloads'),
-    discogsToken: env.DISCOGS_TOKEN ?? '',
-    audioFormat: env.SMARTCRATE_AUDIO_FORMAT ?? 'mp3',
-    audioQuality: env.SMARTCRATE_AUDIO_QUALITY ?? '0',
+    port: num(env.PORT, 4321),
+    dbPath: str(env.SMARTCRATE_DB_PATH) ?? join(REPO_ROOT, 'data/smartcrate.db'),
+    downloadDir: str(env.SMARTCRATE_DOWNLOAD_DIR) ?? join(REPO_ROOT, 'downloads'),
+    discogsToken: str(env.DISCOGS_TOKEN) ?? '',
+    audioFormat: str(env.SMARTCRATE_AUDIO_FORMAT) ?? 'mp3',
+    audioQuality: str(env.SMARTCRATE_AUDIO_QUALITY) ?? '0',
     weights: {
-      like: Number(env.SMARTCRATE_WEIGHT_LIKE ?? 1),
-      dislike: Number(env.SMARTCRATE_WEIGHT_DISLIKE ?? 1.5),
-      artist: Number(env.SMARTCRATE_WEIGHT_ARTIST ?? 1),
-      label: Number(env.SMARTCRATE_WEIGHT_LABEL ?? 0.8),
-      release: Number(env.SMARTCRATE_WEIGHT_RELEASE ?? 0.6),
+      like: num(env.SMARTCRATE_WEIGHT_LIKE, 1),
+      dislike: num(env.SMARTCRATE_WEIGHT_DISLIKE, 1.5),
+      artist: num(env.SMARTCRATE_WEIGHT_ARTIST, 1),
+      label: num(env.SMARTCRATE_WEIGHT_LABEL, 0.8),
+      release: num(env.SMARTCRATE_WEIGHT_RELEASE, 0.6),
     },
-    exploreQueueTargetLength: Number(env.SMARTCRATE_EXPLORE_QUEUE_LENGTH ?? 25),
-    dislikeThreshold: Number(env.SMARTCRATE_DISLIKE_THRESHOLD ?? 0),
-    seeds: loadSeeds(env.SMARTCRATE_SEED_CONFIG ?? join(REPO_ROOT, 'config/seeds.json')),
+    exploreQueueTargetLength: num(env.SMARTCRATE_EXPLORE_QUEUE_LENGTH, 25),
+    dislikeThreshold: num(env.SMARTCRATE_DISLIKE_THRESHOLD, 0),
+    seeds: loadSeeds(str(env.SMARTCRATE_SEED_CONFIG) ?? join(REPO_ROOT, 'config/seeds.json')),
   };
 }
 

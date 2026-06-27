@@ -61,7 +61,7 @@
 
 ## 9. End-to-end verification
 
-- [ ] 9.1 Seed a few liked labels/artists and confirm the recommender fills the explore queue with resolved tracks and reasons — **PENDING: needs a real `DISCOGS_TOKEN`** (set in `.env`, add seeds to `config/seeds.json`, `POST /api/recommend`)
+- [x] 9.1 Seed a few liked labels/artists and confirm the recommender fills the explore queue with resolved tracks and reasons — verified live: seeds resolved against Discogs, `POST /api/recommend` → `{added:25, queueLength:25}`, all tracks resolved to YouTube videos (cold-start reason "seed/exploration" until ratings accumulate)
 - [ ] 9.2 Run the full loop: Play → playback → like/dislike/skip → scores update → queue refills → liked track downloads locally via `yt-dlp` — **PENDING: needs `DISCOGS_TOKEN` + `yt-dlp` + `ffmpeg` installed**
 - [x] 9.3 Verify failure paths: missing Discogs token, unresolved tracks skipped, `yt-dlp` missing → item `failed`, app stays up — covered by unit tests (downloads, recommender) + boot test (no-token `/api/recommend` → 503)
 - [x] 9.4 Run `openspec validate techno-curation-engine --type change --strict` (specs changed) and update `agents/MEMORY.md` with any gotchas discovered
