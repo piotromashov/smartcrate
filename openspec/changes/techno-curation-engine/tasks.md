@@ -46,10 +46,10 @@
 
 ## 7. Backend HTTP API
 
-- [ ] 7.1 Endpoints to fetch the current explore queue / current track
-- [ ] 7.2 Endpoints to record like / dislike / skip on a track
-- [ ] 7.3 Endpoint to trigger/refresh recommendation generation
-- [ ] 7.4 Endpoints to read download-queue status and (optionally) seed entities
+- [x] 7.1 Endpoints to fetch the current explore queue / current track
+- [x] 7.2 Endpoints to record like / dislike / skip on a track
+- [x] 7.3 Endpoint to trigger/refresh recommendation generation
+- [x] 7.4 Endpoints to read download-queue status and (optionally) seed entities
 
 ## 8. Frontend curation player (`curation-player`)
 
