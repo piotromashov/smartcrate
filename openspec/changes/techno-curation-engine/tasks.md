@@ -32,10 +32,10 @@
 
 ## 5. Recommender & explore queue (`recommendation-queue`)
 
-- [ ] 5.1 Implement candidate generation from top positively-scored labels/artists (cache-first), with config-file seed fallback (labels/artists/tracks) and an explicit "seeding required" signal when neither exists
-- [ ] 5.2 Implement candidate scoring (weighted artist + label + release scores)
-- [ ] 5.3 Implement filtering/dedupe: drop disliked artist/label, already-rated, already-seen, and unresolved tracks
-- [ ] 5.4 Rank by score and attach a human-readable "why" reason; fill the explore queue to the target length
+- [x] 5.1 Implement candidate generation from top positively-scored labels/artists (cache-first), with config-file seed fallback (labels/artists/tracks) and an explicit "seeding required" signal when neither exists
+- [x] 5.2 Implement candidate scoring (weighted artist + label + release scores)
+- [x] 5.3 Implement filtering/dedupe: drop disliked artist/label, already-rated, already-seen, and unresolved tracks
+- [x] 5.4 Rank by score and attach a human-readable "why" reason; fill the explore queue to the target length
 
 ## 6. Download queue (`download-queue`)
 
