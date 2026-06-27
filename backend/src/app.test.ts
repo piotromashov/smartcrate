@@ -44,19 +44,45 @@ test('GET /api/current returns the front playable track', async () => {
   await app.close();
 });
 
-test('POST rate like advances queue and enqueues a download', async () => {
+test('POST rate like keeps the current track and enqueues a download (no advance)', async () => {
   const db = openDb(':memory:');
   seedQueue(db);
   const app = buildApp({ db, config: makeConfig(), client: null });
 
   const rated = await app.inject({ method: 'POST', url: '/api/tracks/t1/rate', payload: { value: 'like' } });
   assert.equal(rated.statusCode, 200);
-  assert.equal(rated.json().current, null); // queue now empty
+  assert.equal(rated.json().current.track.id, 't1'); // still playing t1
 
+  // liking again does not duplicate the download
+  await app.inject({ method: 'POST', url: '/api/tracks/t1/rate', payload: { value: 'like' } });
   const downloads = await app.inject({ method: 'GET', url: '/api/downloads' });
   assert.equal(downloads.json().length, 1);
   assert.equal(downloads.json()[0].trackId, 't1');
-  assert.equal(downloads.json()[0].status, 'queued');
+  await app.close();
+});
+
+test('POST rate dislike advances past the track', async () => {
+  const db = openDb(':memory:');
+  seedQueue(db);
+  const app = buildApp({ db, config: makeConfig(), client: null });
+  const rated = await app.inject({ method: 'POST', url: '/api/tracks/t1/rate', payload: { value: 'dislike' } });
+  assert.equal(rated.json().current, null); // queue had only t1 → now empty
+  await app.close();
+});
+
+test('GET /api/queue returns up-next items with score + artist/title', async () => {
+  const db = openDb(':memory:');
+  seedQueue(db);
+  upsertTrack(db, { id: 't2', releaseId: 1, title: 'Two', position: 'A2', artistIds: [1], youtubeVideoId: 'v2', unresolved: false });
+  enqueue(db, { trackId: 't2', score: 1.2, reason: 'label: Token' });
+  const app = buildApp({ db, config: makeConfig(), client: null });
+  const res = await app.inject({ method: 'GET', url: '/api/queue' });
+  const body = res.json();
+  assert.equal(body.current.track.id, 't1');
+  assert.equal(body.upNext.length, 1);
+  assert.equal(body.upNext[0].trackId, 't2');
+  assert.equal(body.upNext[0].score, 1.2);
+  assert.deepEqual(body.upNext[0].artists, ['Surgeon']);
   await app.close();
 });
 

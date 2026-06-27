@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { promisify } from 'node:util';
 import type { Db } from '../db/db';
 import type { Config } from '../config';
@@ -41,6 +42,43 @@ function videoIdFor(db: Db, trackId: string): string | null {
   return row?.youtube_video_id ?? null;
 }
 
+/** Replace filesystem-illegal characters and tidy whitespace; cap length. */
+export function sanitizeFilename(name: string): string {
+  return (
+    name
+      // eslint-disable-next-line no-control-regex
+      .replace(/[\/\\:*?"<>|\x00-\x1f]/g, '-')
+      .replace(/\s+/g, ' ')
+      .replace(/-{2,}/g, '-')
+      .trim()
+      .slice(0, 180) || 'track'
+  );
+}
+
+/** Build "Artist, Artist - Title" (or just the title) from the track's Discogs metadata. */
+function buildBaseName(db: Db, trackId: string): string {
+  const track = db.prepare('SELECT title FROM tracks WHERE id = ?').get(trackId) as
+    | { title: string }
+    | undefined;
+  const title = track?.title ?? trackId;
+  const artists = (
+    db
+      .prepare(
+        `SELECT a.name FROM track_artists ta JOIN artists a ON a.id = ta.artist_id
+          WHERE ta.track_id = ? ORDER BY a.id`,
+      )
+      .all(trackId) as Array<{ name: string }>
+  ).map((r) => r.name);
+  return sanitizeFilename(artists.length ? `${artists.join(', ')} - ${title}` : title);
+}
+
+/** Pick a path that doesn't collide with a different track's file. */
+function uniquePath(dir: string, base: string, ext: string): string {
+  let candidate = join(dir, `${base}.${ext}`);
+  for (let n = 2; existsSync(candidate); n++) candidate = join(dir, `${base} (${n}).${ext}`);
+  return candidate;
+}
+
 /**
  * Process one queued download. Returns false when the queue is empty. Failures
  * (missing/erroring yt-dlp or ffmpeg, unresolved track) are recorded on the item
@@ -56,10 +94,11 @@ export async function processNext(db: Db, config: Config, runner: DownloadRunner
     return true;
   }
 
-  const outTemplate = `${config.downloadDir}/${item.trackId}.%(ext)s`;
-  const filePath = `${config.downloadDir}/${item.trackId}.${config.audioFormat}`;
   try {
     mkdirSync(config.downloadDir, { recursive: true });
+    const filePath = uniquePath(config.downloadDir, buildBaseName(db, item.trackId), config.audioFormat);
+    // yt-dlp output template: same base, its own extension.
+    const outTemplate = filePath.replace(new RegExp(`\\.${config.audioFormat}$`), '.%(ext)s');
     await runner({ videoId, outTemplate, format: config.audioFormat, quality: config.audioQuality });
     markDone(db, item.id, filePath);
   } catch (err) {

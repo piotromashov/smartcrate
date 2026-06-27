@@ -73,6 +73,15 @@ export interface ExploreQueueItem {
 /** Which path first surfaced a track into the explore queue (recorded first-touch). */
 export type CandidateSource = 'discovery' | 'sibling' | 'seed';
 
+/** Lightweight display info for an upcoming queued track (the up-next list). */
+export interface UpNextItem {
+  trackId: string;
+  title: string;
+  artists: string[];
+  score: number;
+  reason: string;
+}
+
 /** A track plus the metadata the player/UI needs to render and play it. */
 export interface PlayableTrack {
   track: Track;

@@ -1,6 +1,6 @@
-import type { Artist, Label, Release, Track, PlayableTrack } from '@smartcrate/shared';
+import type { Artist, Label, Release, Track, PlayableTrack, UpNextItem } from '@smartcrate/shared';
 import type { Db } from './db/db';
-import { currentItem } from './recommender/queue';
+import { currentItem, getQueue } from './recommender/queue';
 
 function getTrack(db: Db, trackId: string): Track | undefined {
   const row = db.prepare('SELECT * FROM tracks WHERE id = ?').get(trackId) as
@@ -67,4 +67,24 @@ export function currentPlayable(db: Db): PlayableTrack | null {
   const item = currentItem(db);
   if (!item) return null;
   return toPlayable(db, item.trackId, item.reason) ?? null;
+}
+
+/** Upcoming queued tracks (everything after the current one) with display metadata. */
+export function upNext(db: Db): UpNextItem[] {
+  return getQueue(db)
+    .slice(1)
+    .map((it) => {
+      const track = db.prepare('SELECT title FROM tracks WHERE id = ?').get(it.trackId) as
+        | { title: string }
+        | undefined;
+      const artists = (
+        db
+          .prepare(
+            `SELECT a.name FROM track_artists ta JOIN artists a ON a.id = ta.artist_id
+              WHERE ta.track_id = ? ORDER BY a.id`,
+          )
+          .all(it.trackId) as Array<{ name: string }>
+      ).map((r) => r.name);
+      return { trackId: it.trackId, title: track?.title ?? it.trackId, artists, score: it.score, reason: it.reason };
+    });
 }

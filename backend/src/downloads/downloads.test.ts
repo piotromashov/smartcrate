@@ -1,12 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, basename } from 'node:path';
+import { mkdtempSync, writeFileSync } from 'node:fs';
 import { openDb } from '../db/db';
-import { upsertRelease, upsertTrack } from '../db/repositories';
+import { upsertArtist, upsertRelease, upsertTrack } from '../db/repositories';
 import type { Config } from '../config';
 import { enqueueDownload, listDownloads, getDownload } from './queue';
-import { processNext, type DownloadRunner } from './worker';
+import { processNext, sanitizeFilename, type DownloadRunner } from './worker';
 
 function makeConfig(): Config {
   return {
@@ -87,4 +88,35 @@ test('unresolved track → failed without running the downloader', async () => {
 test('empty queue → processNext returns false', async () => {
   const db = openDb(':memory:');
   assert.equal(await processNext(db, makeConfig(), ok), false);
+});
+
+test('sanitizeFilename strips path-illegal characters', () => {
+  assert.equal(sanitizeFilename('Surgeon / Regis: A*B?'), 'Surgeon - Regis- A-B-');
+  assert.equal(sanitizeFilename('   '), 'track');
+});
+
+// A runner that actually writes the output file, so collision detection can see it.
+const writingRunner: DownloadRunner = async ({ outTemplate }) => {
+  writeFileSync(outTemplate.replace('.%(ext)s', '.mp3'), 'audio');
+};
+
+test('downloads are named "Artist - Title" and collisions disambiguate', async () => {
+  const db = openDb(':memory:');
+  const dir = mkdtempSync(join(tmpdir(), 'sc-dl-'));
+  const config: Config = { ...makeConfig(), downloadDir: dir };
+
+  upsertArtist(db, { id: 1, name: 'Surgeon' });
+  upsertRelease(db, { id: 1, title: 'R', labelIds: [], artistIds: [], isVa: false });
+  const mk = (id: string) =>
+    upsertTrack(db, { id, releaseId: 1, title: 'Badger (Remix)', position: 'A1', artistIds: [1], youtubeVideoId: 'v', unresolved: false });
+  mk('t1');
+  mk('t2'); // same artist+title → name collision
+
+  const d1 = enqueueDownload(db, 't1')!;
+  await processNext(db, config, writingRunner);
+  assert.equal(basename(getDownload(db, d1.id)!.filePath!), 'Surgeon - Badger (Remix).mp3');
+
+  const d2 = enqueueDownload(db, 't2')!;
+  await processNext(db, config, writingRunner);
+  assert.equal(basename(getDownload(db, d2.id)!.filePath!), 'Surgeon - Badger (Remix) (2).mp3');
 });

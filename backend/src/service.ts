@@ -9,9 +9,13 @@ import { currentPlayable } from './playable';
 export type RateAction = RatingValue | 'skip';
 
 /**
- * Apply a like / dislike / skip to a track: record the rating (like/dislike),
- * remove it from the explore queue, and auto-enqueue a download on like. Skip
- * records no rating event. Returns the new current track.
+ * Apply a like / dislike / skip to a track.
+ * - like: record the rating + auto-enqueue the download, but KEEP the current
+ *   track playing (does not advance). The download dedupe prevents duplicates if
+ *   the user likes again.
+ * - dislike: record the rating and advance to the next track.
+ * - skip: record no rating event and advance.
+ * Returns the (possibly unchanged) current track.
  */
 export function applyRating(
   db: Db,
@@ -24,7 +28,10 @@ export function applyRating(
     return currentPlayable(db);
   }
   rateTrack(db, config.weights, trackId, action);
-  removeFromQueue(db, trackId);
-  if (action === 'like') enqueueDownload(db, trackId);
+  if (action === 'like') {
+    enqueueDownload(db, trackId);
+    return currentPlayable(db); // stays on the current track
+  }
+  removeFromQueue(db, trackId); // dislike advances
   return currentPlayable(db);
 }

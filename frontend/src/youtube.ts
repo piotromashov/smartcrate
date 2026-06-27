@@ -74,7 +74,7 @@ export function useYouTubePlayer(onEnded: () => void): PlayerHandle {
       if (cancelled) return;
       playerRef.current = new YT.Player(host, {
         width: '100%',
-        height: '390',
+        height: '220',
         events: {
           onReady: () => setReady(true),
           onStateChange: (e) => {

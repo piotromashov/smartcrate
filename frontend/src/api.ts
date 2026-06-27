@@ -1,6 +1,6 @@
 import type {
   PlayableTrack,
-  ExploreQueueItem,
+  UpNextItem,
   DownloadItem,
   RecommendResult,
   RatingValue,
@@ -11,7 +11,7 @@ export type RateAction = RatingValue | 'skip';
 
 export interface QueueState {
   current: PlayableTrack | null;
-  queue: ExploreQueueItem[];
+  upNext: UpNextItem[];
 }
 
 async function json<T>(res: Response): Promise<T> {

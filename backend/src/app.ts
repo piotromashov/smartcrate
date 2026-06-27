@@ -2,10 +2,9 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import type { Db } from './db/db';
 import type { Config } from './config';
 import type { DiscogsClient } from './discogs/client';
-import { getQueue } from './recommender/queue';
 import { generateExploreQueue } from './recommender/recommend';
 import { listDownloads } from './downloads/queue';
-import { currentPlayable } from './playable';
+import { currentPlayable, upNext } from './playable';
 import { applyRating, type RateAction } from './service';
 import { getStats } from './stats';
 
@@ -24,10 +23,10 @@ export function buildApp(deps: AppDeps): FastifyInstance {
 
   app.get('/health', async () => ({ ok: true, discogsConfigured: Boolean(client) }));
 
-  // Current track + full explore queue.
+  // Current track + upcoming queued tracks (with display metadata + scores).
   app.get('/api/queue', async () => ({
     current: currentPlayable(db),
-    queue: getQueue(db),
+    upNext: upNext(db),
   }));
 
   app.get('/api/current', async () => currentPlayable(db));

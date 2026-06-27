@@ -98,16 +98,20 @@ function Leader({ title, rows }: { title: string; rows: Array<{ id: number; name
   );
 }
 
+const ACCENT = '#9fef00';
+const MUTED = '#86868f';
+const BORDER = '#26262b';
+
 const s: Record<string, CSSProperties> = {
-  panel: { background: '#f7f7f7', borderRadius: 8, padding: 14, marginBottom: 14 },
-  h: { margin: '0 0 8px' },
-  big: { fontSize: 34, fontWeight: 700 },
-  spark: { fontSize: 22, letterSpacing: 1, fontFamily: 'monospace', color: '#1f9d55' },
-  sub: { color: '#777', fontSize: 13 },
-  caveat: { color: '#996', fontSize: 12, marginTop: 8, lineHeight: 1.4 },
-  table: { borderCollapse: 'collapse', width: '100%', fontSize: 14 },
-  th: { textAlign: 'left', color: '#888', fontWeight: 500, padding: '2px 8px' },
+  panel: { padding: '10px 0', marginBottom: 10, borderBottom: `1px solid ${BORDER}` },
+  h: { margin: '0 0 8px', fontSize: 12, textTransform: 'uppercase', letterSpacing: 1, color: MUTED },
+  big: { fontSize: 32, fontWeight: 700, color: '#ececee' },
+  spark: { fontSize: 20, letterSpacing: 1, fontFamily: 'monospace', color: ACCENT },
+  sub: { color: MUTED, fontSize: 13 },
+  caveat: { color: '#b59f5b', fontSize: 12, marginTop: 8, lineHeight: 1.4 },
+  table: { borderCollapse: 'collapse', width: '100%', fontSize: 13 },
+  th: { textAlign: 'left', color: MUTED, fontWeight: 500, padding: '2px 8px' },
   td: { padding: '2px 8px' },
   cols: { display: 'flex', gap: 24, marginBottom: 8 },
-  leaderTitle: { fontWeight: 600, marginBottom: 4 },
+  leaderTitle: { fontWeight: 600, marginBottom: 4, fontSize: 13 },
 };
