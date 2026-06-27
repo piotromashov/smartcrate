@@ -39,10 +39,10 @@
 
 ## 6. Download queue (`download-queue`)
 
-- [ ] 6.1 Auto-enqueue a download item when a track is liked; prevent duplicate items for the same track
-- [ ] 6.2 Implement the background worker invoking local `yt-dlp` on the resolved video (MP3 320 kbps via `-x --audio-format mp3 --audio-quality 0`, requires `ffmpeg`); transition queued → downloading → done and store the file path
-- [ ] 6.3 Isolate failures: missing/failing `yt-dlp` or `ffmpeg` marks the item `failed` with an error reason and does not crash the server
-- [ ] 6.4 Expose download status for observability
+- [x] 6.1 Auto-enqueue a download item when a track is liked; prevent duplicate items for the same track
+- [x] 6.2 Implement the background worker invoking local `yt-dlp` on the resolved video (MP3 320 kbps via `-x --audio-format mp3 --audio-quality 0`, requires `ffmpeg`); transition queued → downloading → done and store the file path
+- [x] 6.3 Isolate failures: missing/failing `yt-dlp` or `ffmpeg` marks the item `failed` with an error reason and does not crash the server
+- [x] 6.4 Expose download status for observability
 
 ## 7. Backend HTTP API
 
