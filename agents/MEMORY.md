@@ -22,10 +22,27 @@
 
 Newest first. One entry per decision: date, what was decided, why.
 
-- **2026-06-26 — Adopted OpenSpec for spec-driven development.** Spec-first
-  workflow (`/opsx:propose` → review → `/opsx:apply` → `/opsx:archive`); specs
-  checked into the repo as the source of truth. Initialized with
-  `openspec init --tools claude,cursor`.
+- **2026-06-26 — Adopted the `intent-driven` OpenSpec framework (Claude Code
+  port).** Switched the project default schema from `spec-driven` to
+  `intent-driven` (`openspec/config.yaml`): artifact chain **proposal → specs →
+  design → adr → tasks**, with skills bound per artifact (proposal→grill-me,
+  specs→gherkin-authoring, design→c4-diagrams, adr→architectural-decision-records).
+  Ported from the OpenCode-targeted `intent-driven-dev/intent-driven-template` +
+  `openspec-schemas`. Adaptations: skills live in `.claude/skills/`, agents in
+  `.claude/agents/`; `openspec update` migrated to a custom profile with 8
+  workflows (added `new`/`continue`/`verify`); `bulk-apply` command hand-authored;
+  the `adversarial-author`/`-reviewer` agents use two Claude models (opus/sonnet)
+  in place of the upstream cross-provider models; `bulk-apply` uses Claude Code
+  worktree subagents instead of Obra's Superpowers. Git-discipline gates ("cross
+  `main` between phases") added to `AGENTS.md` + the `openspec-git-discipline`
+  skill. **Fix:** upstream `config.yaml` keyed the spec rule as `spec:` but the
+  schema artifact id is `specs` — corrected to `specs:` so gherkin-authoring binds.
+  ADRs persist in top-level `adr/` (immutable, supersession-linked), not archived.
+- **2026-06-26 — (superseded) Adopted OpenSpec for spec-driven development.**
+  Original `spec-driven` workflow, initialized with
+  `openspec init --tools claude,cursor`. Superseded by the intent-driven adoption
+  above; the in-flight `techno-curation-engine` change was re-scaffolded onto
+  intent-driven.
 - **2026-06-26 — Agent docs centralized under `agents/`.** `AGENTS.md` (rules)
   and `MEMORY.md` (this file) live in `agents/`; root `CLAUDE.md` is a thin
   pointer. Requirements deliberately kept out of these files — they belong in
