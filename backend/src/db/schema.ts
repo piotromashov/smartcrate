@@ -98,4 +98,9 @@ export const MIGRATIONS: string[] = [
     fetched_at TEXT NOT NULL
   );
   `,
+  // v2 — record which candidate source first surfaced a track (for per-source stats).
+  // NULL on rows seen before this migration; excluded from per-source breakdowns.
+  `
+  ALTER TABLE seen_tracks ADD COLUMN source TEXT;
+  `,
 ];

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
-import type { PlayableTrack, DownloadItem } from '@smartcrate/shared';
-import { getQueue, rate, recommend, getDownloads, type RateAction } from './api';
+import type { PlayableTrack, DownloadItem, Stats } from '@smartcrate/shared';
+import { getQueue, rate, recommend, getDownloads, getStats, type RateAction } from './api';
 import { useYouTubePlayer } from './youtube';
+import { StatsView } from './Stats';
 
 type Status = 'idle' | 'loading' | 'playing' | 'empty' | 'exhausted' | 'seeding' | 'error';
 
@@ -13,10 +14,21 @@ export function App() {
   const [message, setMessage] = useState('');
   const [downloads, setDownloads] = useState<DownloadItem[]>([]);
   const [paused, setPaused] = useState(false);
+  const [view, setView] = useState<'curate' | 'stats'>('curate');
+  const [stats, setStats] = useState<Stats | null>(null);
 
   const player = useYouTubePlayer(() => {
     void advance('skip'); // auto-advance when a track ends
   });
+
+  const refreshStats = () => {
+    void getStats().then(setStats).catch(() => undefined);
+  };
+
+  // Load stats on mount and whenever the dashboard is opened.
+  useEffect(() => {
+    if (view === 'stats') refreshStats();
+  }, [view]);
 
   // Load the current video whenever it changes and the player is ready.
   useEffect(() => {
@@ -70,6 +82,7 @@ export function App() {
     try {
       const { current: next } = await rate(track, value);
       refreshDownloads();
+      refreshStats();
       if (next) {
         setCurrent(next);
         setStatus('playing');
@@ -104,14 +117,31 @@ export function App() {
       <h1 style={{ marginBottom: 4 }}>smartcrate</h1>
       <p style={styles.subtitle}>Personal techno curation — hit play and curate.</p>
 
-      {!started && (
+      <nav style={styles.nav}>
+        <button
+          style={view === 'curate' ? styles.tabActive : styles.tab}
+          onClick={() => setView('curate')}
+        >
+          Curate
+        </button>
+        <button
+          style={view === 'stats' ? styles.tabActive : styles.tab}
+          onClick={() => setView('stats')}
+        >
+          Stats
+        </button>
+      </nav>
+
+      {view === 'stats' && <StatsView stats={stats} />}
+
+      {view === 'curate' && !started && (
         <button style={styles.play} onClick={() => void start()}>
           ▶ Play
         </button>
       )}
 
-      {/* Player stays mounted so the iframe persists across tracks. */}
-      <div style={{ display: started ? 'block' : 'none' }}>
+      {/* Player stays mounted (display:none in Stats view) so audio keeps playing. */}
+      <div style={{ display: started && view === 'curate' ? 'block' : 'none' }}>
         <div ref={player.containerRef} style={styles.player} />
 
         {status === 'loading' && <p>Loading…</p>}
@@ -178,6 +208,9 @@ function DownloadsPanel({ downloads }: { downloads: DownloadItem[] }) {
 const styles: Record<string, CSSProperties> = {
   main: { fontFamily: 'system-ui, sans-serif', maxWidth: 720, margin: '0 auto', padding: '2rem' },
   subtitle: { color: '#666', marginTop: 0 },
+  nav: { display: 'flex', gap: 8, margin: '8px 0 20px' },
+  tab: { padding: '6px 14px', cursor: 'pointer', borderRadius: 6, border: '1px solid #ccc', background: '#fff' },
+  tabActive: { padding: '6px 14px', cursor: 'pointer', borderRadius: 6, border: '1px solid #333', background: '#333', color: '#fff' },
   play: { fontSize: 20, padding: '12px 28px', cursor: 'pointer', borderRadius: 8 },
   player: { background: '#000', borderRadius: 8, overflow: 'hidden', minHeight: 200 },
   nowPlaying: { marginTop: 16 },

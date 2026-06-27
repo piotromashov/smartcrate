@@ -70,6 +70,9 @@ export interface ExploreQueueItem {
   reason: string;
 }
 
+/** Which path first surfaced a track into the explore queue (recorded first-touch). */
+export type CandidateSource = 'discovery' | 'sibling' | 'seed';
+
 /** A track plus the metadata the player/UI needs to render and play it. */
 export interface PlayableTrack {
   track: Track;
@@ -117,4 +120,50 @@ export interface RecommendResult {
   queueLength: number;
   /** Present when there is no signal and no seeds configured. */
   seedingRequired?: boolean;
+}
+
+// ── Stats (derived on read from the event log — see ADR-0005) ─────────────────
+
+export interface LikeRatePoint {
+  /** YYYY-MM-DD */
+  date: string;
+  likes: number;
+  dislikes: number;
+  /** likes / (likes+dislikes), or null when there are no verdicts that day. */
+  rate: number | null;
+}
+
+/** Per-source contribution. Descriptive only — NOT causal lift (sources aren't randomly assigned). */
+export interface SourceStat {
+  source: CandidateSource;
+  surfaced: number;
+  rated: number;
+  likes: number;
+  /** likes from this source ÷ total likes. */
+  likeShare: number;
+  /** likes ÷ (likes+dislikes) within this source, or null. */
+  likeRate: number | null;
+}
+
+export interface LeaderEntry {
+  id: number;
+  name: string;
+  score: number;
+}
+
+export interface Stats {
+  likeRate: {
+    overall: number | null;
+    daily: LikeRatePoint[];
+  };
+  /** Contribution by source — present the contribution-not-lift caveat in any UI. */
+  bySource: SourceStat[];
+  counters: {
+    today: { rated: number; liked: number; downloaded: number };
+    total: { rated: number; liked: number; downloaded: number; downloadFailed: number };
+  };
+  taste: { labels: LeaderEntry[]; artists: LeaderEntry[] };
+  /** Fraction of fetched tracks with no resolved YouTube video (0..1). */
+  unresolvedRate: number;
+  generatedAt: string;
 }

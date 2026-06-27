@@ -4,6 +4,7 @@ import type {
   DownloadItem,
   RecommendResult,
   RatingValue,
+  Stats,
 } from '@smartcrate/shared';
 
 export type RateAction = RatingValue | 'skip';
@@ -39,4 +40,8 @@ export function recommend(): Promise<RecommendResult> {
 
 export function getDownloads(): Promise<DownloadItem[]> {
   return fetch('/api/downloads').then((r) => json<DownloadItem[]>(r));
+}
+
+export function getStats(): Promise<Stats> {
+  return fetch('/api/stats').then((r) => json<Stats>(r));
 }

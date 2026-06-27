@@ -1,4 +1,4 @@
-import type { ExploreQueueItem } from '@smartcrate/shared';
+import type { ExploreQueueItem, CandidateSource } from '@smartcrate/shared';
 import type { Db } from '../db/db';
 
 interface ExploreRow {
@@ -28,18 +28,19 @@ export function isSeen(db: Db, trackId: string): boolean {
   return db.prepare('SELECT 1 FROM seen_tracks WHERE track_id = ?').get(trackId) !== undefined;
 }
 
-export function markSeen(db: Db, trackId: string): void {
+export function markSeen(db: Db, trackId: string, source: CandidateSource | null = null): void {
+  // First-touch: INSERT OR IGNORE means an already-seen track keeps its original source.
   db.prepare(
-    'INSERT OR IGNORE INTO seen_tracks (track_id, seen_at) VALUES (?, ?)',
-  ).run(trackId, new Date().toISOString());
+    'INSERT OR IGNORE INTO seen_tracks (track_id, seen_at, source) VALUES (?, ?, ?)',
+  ).run(trackId, new Date().toISOString(), source);
 }
 
-/** Append a candidate to the explore queue (and mark it seen). */
-export function enqueue(db: Db, item: ExploreQueueItem): void {
+/** Append a candidate to the explore queue and mark it seen with its source. */
+export function enqueue(db: Db, item: ExploreQueueItem, source: CandidateSource | null = null): void {
   db.prepare(
     `INSERT OR IGNORE INTO explore_queue (track_id, score, reason, position) VALUES (?, ?, ?, ?)`,
   ).run(item.trackId, item.score, item.reason, nextPosition(db));
-  markSeen(db, item.trackId);
+  markSeen(db, item.trackId, source);
 }
 
 /** The current (front) item in the queue, or undefined when empty. */

@@ -7,6 +7,7 @@ import { generateExploreQueue } from './recommender/recommend';
 import { listDownloads } from './downloads/queue';
 import { currentPlayable } from './playable';
 import { applyRating, type RateAction } from './service';
+import { getStats } from './stats';
 
 export interface AppDeps {
   db: Db;
@@ -58,6 +59,9 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   app.get('/api/downloads', async () => listDownloads(db));
 
   app.get('/api/seeds', async () => config.seeds);
+
+  // Read-only metrics, derived on read from the event log (ADR-0005).
+  app.get('/api/stats', async () => getStats(db));
 
   return app;
 }

@@ -88,6 +88,12 @@ test('generates from positive entity scores, ranked with reasons', async () => {
   assert.match(queue[0]!.reason, /artist: Surgeon/);
   assert.ok(queue[0]!.score > queue[1]!.score);
   assert.equal(queue[1]!.trackId, 'r101-0');
+
+  // source tagging: release 100 is positively scored (sibling), release 101 isn't (discovery)
+  const src = (id: string) =>
+    (db.prepare('SELECT source FROM seen_tracks WHERE track_id = ?').get(id) as { source: string } | undefined)?.source;
+  assert.equal(src('r100-1'), 'sibling');
+  assert.equal(src('r101-0'), 'discovery');
 });
 
 test('seed fallback fills the queue when there is no rating signal', async () => {
@@ -95,6 +101,9 @@ test('seed fallback fills the queue when there is no rating signal', async () =>
   const res = await generateExploreQueue(db, client(RELEASES), makeConfig({ seeds: { labels: [10] } }));
   assert.equal(res.seedingRequired, undefined);
   assert.equal(res.added, 3); // r100-0, r100-1, r101-0 — all unrated/unseen/resolved
+  // seed-fallback run → every surfaced track tagged 'seed'
+  const seedCount = db.prepare("SELECT COUNT(*) AS n FROM seen_tracks WHERE source = 'seed'").get() as { n: number };
+  assert.equal(seedCount.n, 3);
 });
 
 // Records every fetched path; returns 404 for everything (no discovery, no re-fetch).

@@ -1,4 +1,4 @@
-import type { RecommendResult, SeedConfig } from '@smartcrate/shared';
+import type { RecommendResult, SeedConfig, CandidateSource } from '@smartcrate/shared';
 import type { Db } from '../db/db';
 import type { Config } from '../config';
 import type { DiscogsClient } from '../discogs/client';
@@ -17,6 +17,7 @@ const MAX_RELEASES = 40;
 
 interface Candidate {
   trackId: string;
+  releaseId: number;
   score: number;
   reason: string;
 }
@@ -143,7 +144,7 @@ function scoreCandidate(db: Db, config: Config, trackId: string): Candidate | nu
   if (bestArtist !== undefined) parts.push(`artist: ${nameOf(db, 'artists', bestArtist) ?? bestArtist}`);
   const reason = parts.length ? parts.join('; ') : 'seed/exploration';
 
-  return { trackId, score, reason };
+  return { trackId, releaseId, score, reason };
 }
 
 function candidateTracks(db: Db, releaseIds: number[], config: Config): Candidate[] {
@@ -178,9 +179,11 @@ export async function generateExploreQueue(
 
   const top = topPositiveEntities(db);
   let releaseIds: number[];
+  let usedSeedFallback = false;
   if (top.labelIds.length || top.artistIds.length) {
     releaseIds = await gatherFromEntities(client, top.labelIds, top.artistIds);
   } else {
+    usedSeedFallback = true;
     const seeds = await resolveSeeds(client, config.seeds);
     if (!seeds.labelIds.length && !seeds.artistIds.length && !seeds.releaseIds.length) {
       return { added: 0, queueLength: queueLength(db), seedingRequired: true };
@@ -204,14 +207,23 @@ export async function generateExploreQueue(
   // Sibling source: tracks of positively-scored releases are already persisted
   // (fetched when their first track surfaced), so include them with no Discogs
   // call. The existing filters/dedupe/ranking in candidateTracks apply unchanged.
-  const candidateReleaseIds = [...new Set([...discoveryIds, ...positiveScoreReleaseIds(db)])];
+  const siblingReleaseIds = usedSeedFallback ? [] : positiveScoreReleaseIds(db);
+  const siblingSet = new Set(siblingReleaseIds);
+  const candidateReleaseIds = [...new Set([...discoveryIds, ...siblingReleaseIds])];
 
   const candidates = candidateTracks(db, candidateReleaseIds, config).sort((a, b) => b.score - a.score);
 
   let added = 0;
   for (const candidate of candidates) {
     if (added >= need) break;
-    enqueue(db, candidate);
+    // Source attribution (first-touch, persisted on seen_tracks): seed-fallback run
+    // → 'seed'; a positively-scored release's track → 'sibling'; else 'discovery'.
+    const source: CandidateSource = usedSeedFallback
+      ? 'seed'
+      : siblingSet.has(candidate.releaseId)
+        ? 'sibling'
+        : 'discovery';
+    enqueue(db, candidate, source);
     added += 1;
   }
   return { added, queueLength: queueLength(db) };
