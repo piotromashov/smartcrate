@@ -34,6 +34,15 @@ function topPositiveEntities(db: Db): { labelIds: number[]; artistIds: number[] 
   return { labelIds: pick('label'), artistIds: pick('artist') };
 }
 
+/** Release ids with a positive entity score — their sibling tracks are surfaced from the local DB. */
+function positiveScoreReleaseIds(db: Db): number[] {
+  return (
+    db
+      .prepare(`SELECT entity_id FROM entity_scores WHERE kind = 'release' AND score > 0`)
+      .all() as Array<{ entity_id: string }>
+  ).map((r) => Number(r.entity_id));
+}
+
 async function gatherFromEntities(
   client: DiscogsClient,
   labelIds: number[],
@@ -182,8 +191,9 @@ export async function generateExploreQueue(
     ];
   }
 
-  releaseIds = [...new Set(releaseIds)].slice(0, MAX_RELEASES);
-  for (const id of releaseIds) {
+  // Discovery releases must be fetched from Discogs to populate the local DB.
+  const discoveryIds = [...new Set(releaseIds)].slice(0, MAX_RELEASES);
+  for (const id of discoveryIds) {
     try {
       await getRelease(client, db, id);
     } catch {
@@ -191,7 +201,12 @@ export async function generateExploreQueue(
     }
   }
 
-  const candidates = candidateTracks(db, releaseIds, config).sort((a, b) => b.score - a.score);
+  // Sibling source: tracks of positively-scored releases are already persisted
+  // (fetched when their first track surfaced), so include them with no Discogs
+  // call. The existing filters/dedupe/ranking in candidateTracks apply unchanged.
+  const candidateReleaseIds = [...new Set([...discoveryIds, ...positiveScoreReleaseIds(db)])];
+
+  const candidates = candidateTracks(db, candidateReleaseIds, config).sort((a, b) => b.score - a.score);
 
   let added = 0;
   for (const candidate of candidates) {

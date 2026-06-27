@@ -96,3 +96,60 @@ test('seed fallback fills the queue when there is no rating signal', async () =>
   assert.equal(res.seedingRequired, undefined);
   assert.equal(res.added, 3); // r100-0, r100-1, r101-0 — all unrated/unseen/resolved
 });
+
+// Records every fetched path; returns 404 for everything (no discovery, no re-fetch).
+function recordingClient(calls: string[]): DiscogsClient {
+  const fetchImpl = (async (input: string | URL | Request) => {
+    calls.push(new URL(String(input)).pathname);
+    return { ok: false, status: 404, statusText: 'NF', text: async () => '' } as Response;
+  }) as typeof fetch;
+  return new DiscogsClient({ token: 't', cache: memoryCache(), intervalMs: 0, fetchImpl });
+}
+
+function seedReleaseInDb(db: ReturnType<typeof openDb>, releaseId: number, label: number, artist: number): void {
+  upsertLabel(db, { id: label, name: `L${label}` });
+  upsertArtist(db, { id: artist, name: `A${artist}` });
+  upsertRelease(db, { id: releaseId, title: `R${releaseId}`, labelIds: [label], artistIds: [artist], isVa: false });
+  for (let i = 0; i < 3; i++) {
+    upsertTrack(db, {
+      id: `r${releaseId}-${i}`,
+      releaseId,
+      title: `T${i}`,
+      position: `A${i}`,
+      artistIds: [artist],
+      youtubeVideoId: `v${releaseId}-${i}`,
+      unresolved: false,
+    });
+  }
+}
+
+test('surfaces siblings of a positively-scored release without re-fetching it', async () => {
+  const db = openDb(':memory:');
+  seedReleaseInDb(db, 200, 20, 5);
+  rateTrack(db, makeConfig().weights, 'r200-0', 'like'); // release 200 score = +1
+
+  const calls: string[] = [];
+  await generateExploreQueue(db, recordingClient(calls), makeConfig());
+
+  const ids = getQueue(db).map((it) => it.trackId);
+  assert.ok(ids.includes('r200-1') && ids.includes('r200-2')); // siblings surfaced
+  assert.ok(!ids.includes('r200-0')); // the rated track is excluded
+  assert.ok(!calls.some((p) => p.includes('/releases/200'))); // sourced from DB, not re-fetched
+});
+
+test('a release whose score dropped to <= 0 does not surface siblings', async () => {
+  const db = openDb(':memory:');
+  const w = makeConfig().weights;
+  seedReleaseInDb(db, 200, 20, 5); // will be tipped negative
+  seedReleaseInDb(db, 300, 30, 6); // stays positive
+  rateTrack(db, w, 'r300-0', 'like'); // release 300 = +1
+  rateTrack(db, w, 'r200-0', 'like'); // release 200 = +1
+  rateTrack(db, w, 'r200-1', 'dislike'); // release 200 = +1 - 1.5 = -0.5  ≤ 0
+
+  const calls: string[] = [];
+  await generateExploreQueue(db, recordingClient(calls), makeConfig());
+
+  const ids = getQueue(db).map((it) => it.trackId);
+  assert.ok(ids.includes('r300-1') && ids.includes('r300-2')); // positive release surfaces
+  assert.ok(!ids.some((id) => id.startsWith('r200-'))); // closed release surfaces nothing
+});
