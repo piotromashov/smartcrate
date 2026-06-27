@@ -17,12 +17,12 @@
 
 ## 3. Discogs catalog integration (`discogs-catalog`)
 
-- [ ] 3.1 Implement the authenticated Discogs client; fail fast with a clear error when the token env var is missing
-- [ ] 3.2 Add a request throttle (queue/pacer) keeping calls within ~60/min
-- [ ] 3.3 Add a SQLite-backed response cache; serve cached resources before hitting the network
-- [ ] 3.4 Implement metadata lookup for artists, labels, releases (with VA flag), and tracks
-- [ ] 3.5 Implement candidate discovery by label and by artist
-- [ ] 3.6 Implement YouTube video resolution from a release's `videos` array; mark tracks with no video as `unresolved`
+- [x] 3.1 Implement the authenticated Discogs client; fail fast with a clear error when the token env var is missing
+- [x] 3.2 Add a request throttle (queue/pacer) keeping calls within ~60/min
+- [x] 3.3 Add a SQLite-backed response cache; serve cached resources before hitting the network
+- [x] 3.4 Implement metadata lookup for artists, labels, releases (with VA flag), and tracks
+- [x] 3.5 Implement candidate discovery by label and by artist
+- [x] 3.6 Implement YouTube video resolution from a release's `videos` array; mark tracks with no video as `unresolved`
 
 ## 4. Rating model (`rating-model`)
 
