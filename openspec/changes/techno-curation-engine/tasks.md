@@ -26,9 +26,9 @@
 
 ## 4. Rating model (`rating-model`)
 
-- [ ] 4.1 Implement append-only rating-event recording (track, value, timestamp)
-- [ ] 4.2 Implement incremental entity-score updates on like/dislike (artist, label, release/VA, track) with configurable like/dislike weights
-- [ ] 4.3 Implement full recompute-from-events and verify it matches maintained scores
+- [x] 4.1 Implement append-only rating-event recording (track, value, timestamp)
+- [x] 4.2 Implement incremental entity-score updates on like/dislike (artist, label, release/VA, track) with configurable like/dislike weights
+- [x] 4.3 Implement full recompute-from-events and verify it matches maintained scores
 
 ## 5. Recommender & explore queue (`recommendation-queue`)
 
