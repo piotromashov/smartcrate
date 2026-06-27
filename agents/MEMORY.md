@@ -58,7 +58,22 @@ Newest first. One entry per decision: date, what was decided, why.
 - CI/CD pipeline notes
 - Non-obvious gotchas discovered while building -->
 
-_None yet — greenfield._
+- **Stack (2026-06-27):** TypeScript monorepo via **npm workspaces** —
+  `shared/` (types-only, consumed via `import type` so no build step),
+  `backend/` (Node ≥ 22.5 ESM, Fastify, built-in `node:sqlite`, run with `tsx`),
+  `frontend/` (Vite + React). Module setup: `moduleResolution: "Bundler"`,
+  extensionless relative imports. Shared base config in `tsconfig.base.json`.
+  **Gotcha:** better-sqlite3 (ADR-0002) wouldn't build on Node 26 → switched to
+  built-in `node:sqlite` ([ADR-0004]); requires Node ≥ 22.5.
+- **Env var NAMES (values live only in `.env`, never committed):**
+  `DISCOGS_TOKEN` (required for catalog), `PORT`, `SMARTCRATE_DB_PATH`,
+  `SMARTCRATE_DOWNLOAD_DIR`, `SMARTCRATE_SEED_CONFIG`,
+  `SMARTCRATE_AUDIO_FORMAT`/`SMARTCRATE_AUDIO_QUALITY`, and the
+  `SMARTCRATE_WEIGHT_*` / `SMARTCRATE_EXPLORE_QUEUE_LENGTH` /
+  `SMARTCRATE_DISLIKE_THRESHOLD` recommender tunables. See `.env.example`.
+- **Local data (gitignored):** SQLite at `data/smartcrate.db`, audio in
+  `downloads/`, personal seeds in `config/seeds.json`.
+- **External binaries:** downloads need `yt-dlp` + `ffmpeg` on PATH (MP3 320k).
 
 ---
 

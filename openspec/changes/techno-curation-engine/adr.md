@@ -18,5 +18,6 @@ and intentionally left out of ADRs so they can evolve without supersession.
 ## New Durable ADRs Created
 
 - [ADR-0001](../../../adr/0001-local-first-single-user-architecture.md) — local-first, single-user architecture.
-- [ADR-0002](../../../adr/0002-sqlite-as-local-store.md) — SQLite (better-sqlite3) as the local store.
+- [ADR-0002](../../../adr/0002-sqlite-as-local-store.md) — SQLite as the local store. **(superseded by ADR-0004 during apply.)**
 - [ADR-0003](../../../adr/0003-discogs-sole-catalog-and-youtube-resolution.md) — Discogs as sole catalog API; YouTube resolution via release `videos`.
+- [ADR-0004](../../../adr/0004-use-node-builtin-sqlite.md) — use Node's built-in `node:sqlite` (supersedes ADR-0002); recorded mid-apply when better-sqlite3 wouldn't build on Node 26. Bumps min Node to ≥ 22.5.

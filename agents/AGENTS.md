@@ -12,11 +12,17 @@
 
 ## What smartcrate is
 
-<!-- FILL IN: one or two sentences. What does smartcrate do, for whom?
-     e.g. "smartcrate is a CLI that ... " or "a web app that ..." -->
-_TODO — one-paragraph description._
+smartcrate is a **local-first personal techno curation engine**. At the start of
+the day you hit Play; it streams candidate tracks via embedded YouTube and you
+like / dislike / skip them. That signal scores the tracks' artists, labels, and
+releases (Discogs is the catalog authority), a simple recommender ranks new
+Discogs-sourced candidates into an explore queue, and liked tracks are queued for
+local download via `yt-dlp`. Single-user, runs entirely on your own machine.
 
-**Status:** greenfield. No code yet. Stack: _TODO (language, framework, runtime)._
+**Status:** in development. **Stack:** TypeScript monorepo (npm workspaces) —
+`backend/` (Node ≥ 22.5 + Fastify + built-in `node:sqlite`, `yt-dlp` worker),
+`frontend/` (Vite + React + YouTube IFrame API), `shared/` (types). See `adr/`
+for durable decisions.
 
 ---
 
@@ -81,15 +87,21 @@ openspec validate --all    # check specs/changes for structural issues
 
 ## Build / run / test
 
-<!-- FILL IN once the stack is chosen. Agents should be able to verify work
-     end-to-end from these commands. Keep them current. -->
+Requires Node ≥ 20.19. For downloads: a local `yt-dlp` and `ffmpeg` on PATH.
+Copy `.env.example` → `.env` and set `DISCOGS_TOKEN`.
 
 ```bash
-# install:   TODO
-# run:       TODO
-# test:      TODO
-# lint:      TODO
+# install:   npm install                 # installs all workspaces
+# run:       npm run dev                  # backend (:4321) + frontend (:5173)
+#   backend only:   npm run dev:backend
+#   frontend only:  npm run dev:frontend
+# typecheck: npm run typecheck            # tsc --noEmit across backend + frontend
+# test:      npm test                     # backend node:test (tsx)
+# build:     npm run build                # frontend production build
 ```
+
+Config: env vars in `.env` (see `.env.example`); cold-start seeds in
+`config/seeds.json` (template: `config/seeds.example.json`).
 
 **Verification discipline:** a task in a change's `tasks.md` is only "done"
 when it's been run/tested, not just written. If you can't verify a behavior

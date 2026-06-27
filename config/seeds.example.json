@@ -1,0 +1,6 @@
+{
+  "_comment": "Cold-start seeds for the recommender. Copy to config/seeds.json and edit. Labels/artists may be Discogs ids (numbers) or names (strings); releases are Discogs release ids whose tracks seed the explore queue directly.",
+  "labels": ["Ostgut Ton", "Token", 1000],
+  "artists": ["Answer Code Request", "Surgeon"],
+  "releases": [123456]
+}

@@ -1,19 +1,19 @@
 ## 1. Project scaffolding & stack setup
 
-- [ ] 1.1 Initialize a TypeScript monorepo layout (`backend/`, `frontend/`, `shared/`) with root tooling (package manager workspaces, tsconfig base)
-- [ ] 1.2 Add backend deps: Fastify, better-sqlite3, a Discogs HTTP client (or fetch wrapper), dotenv; set up `tsconfig`, build, and dev scripts
-- [ ] 1.3 Add frontend deps: Vite + React + TypeScript; scaffold app shell
-- [ ] 1.4 Create `shared/` package for TS types reused by backend and frontend
-- [ ] 1.5 Update `.gitignore` to cover `.env`, the SQLite DB file, and the downloads directory
-- [ ] 1.6 Document env vars by NAME only (`DISCOGS_TOKEN`, `SMARTCRATE_DOWNLOAD_DIR`, etc.) in a `.env.example`
-- [ ] 1.7a Add a seed config file (labels/artists/tracks) with an example, loaded by the backend on startup
-- [ ] 1.7 Fill in `agents/AGENTS.md` "What/Stack" and Build/run/test sections; record the stack decision and env-var names in `agents/MEMORY.md`
+- [x] 1.1 Initialize a TypeScript monorepo layout (`backend/`, `frontend/`, `shared/`) with root tooling (npm workspaces, `tsconfig.base.json`)
+- [x] 1.2 Add backend deps: Fastify, `node:sqlite` (built-in — see ADR-0004), a Discogs fetch client, dotenv; tsx dev/start + typecheck scripts
+- [x] 1.3 Add frontend deps: Vite + React + TypeScript; scaffold app shell
+- [x] 1.4 Create `shared/` package for TS types reused by backend and frontend (types-only, `import type`)
+- [x] 1.5 Update `.gitignore` to cover `.env`, the SQLite DB file, downloads, and `config/seeds.json`
+- [x] 1.6 Document env vars by NAME only (`DISCOGS_TOKEN`, `SMARTCRATE_DOWNLOAD_DIR`, etc.) in a `.env.example`
+- [x] 1.7a Add a seed config file (labels/artists/releases) with an example, loaded by the backend on startup
+- [x] 1.7 Fill in `agents/AGENTS.md` "What/Stack" and Build/run/test sections; record the stack decision and env-var names in `agents/MEMORY.md`
 
 ## 2. Persistence layer (SQLite)
 
-- [ ] 2.1 Define the schema/migrations: entities (artist, label, release w/ `is_va`, track), rating events, derived entity scores, explore-queue items, download-queue items, Discogs response cache
-- [ ] 2.2 Implement a SQLite access module (connection, migration runner, typed query helpers) via better-sqlite3
-- [ ] 2.3 Add repository functions for upserting entities and recording/reading rating events
+- [x] 2.1 Define the schema/migrations: entities (artist, label, release w/ `is_va`, track), rating events, derived entity scores, explore-queue items, download-queue items, Discogs response cache
+- [x] 2.2 Implement a SQLite access module (connection, migration runner, typed query helpers) via `node:sqlite`
+- [x] 2.3 Add repository functions for upserting entities and recording/reading rating events
 
 ## 3. Discogs catalog integration (`discogs-catalog`)
 
