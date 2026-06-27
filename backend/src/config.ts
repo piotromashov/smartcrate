@@ -1,9 +1,14 @@
 import { readFileSync, existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { resolve, join } from 'node:path';
 import { config as loadDotenv } from 'dotenv';
 import type { SeedConfig } from '@smartcrate/shared';
 
-loadDotenv();
+// Repo root, so default data/seed/download paths are stable regardless of the
+// working directory the backend is launched from (npm workspace scripts run with
+// CWD = backend/). config.ts lives at <root>/backend/src/config.ts.
+const REPO_ROOT = resolve(import.meta.dirname, '../..');
+
+loadDotenv({ path: join(REPO_ROOT, '.env') });
 
 /** Recommender / scoring weights — sane defaults, tune during use (design open question). */
 export interface Weights {
@@ -46,8 +51,8 @@ export function loadConfig(): Config {
   const env = process.env;
   return {
     port: Number(env.PORT ?? 4321),
-    dbPath: env.SMARTCRATE_DB_PATH ?? resolve('data/smartcrate.db'),
-    downloadDir: env.SMARTCRATE_DOWNLOAD_DIR ?? resolve('downloads'),
+    dbPath: env.SMARTCRATE_DB_PATH ?? join(REPO_ROOT, 'data/smartcrate.db'),
+    downloadDir: env.SMARTCRATE_DOWNLOAD_DIR ?? join(REPO_ROOT, 'downloads'),
     discogsToken: env.DISCOGS_TOKEN ?? '',
     audioFormat: env.SMARTCRATE_AUDIO_FORMAT ?? 'mp3',
     audioQuality: env.SMARTCRATE_AUDIO_QUALITY ?? '0',
@@ -60,7 +65,7 @@ export function loadConfig(): Config {
     },
     exploreQueueTargetLength: Number(env.SMARTCRATE_EXPLORE_QUEUE_LENGTH ?? 25),
     dislikeThreshold: Number(env.SMARTCRATE_DISLIKE_THRESHOLD ?? 0),
-    seeds: loadSeeds(env.SMARTCRATE_SEED_CONFIG ?? 'config/seeds.json'),
+    seeds: loadSeeds(env.SMARTCRATE_SEED_CONFIG ?? join(REPO_ROOT, 'config/seeds.json')),
   };
 }
 

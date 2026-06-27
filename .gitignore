@@ -54,9 +54,10 @@ yarn-debug.log*
 pnpm-debug.log*
 
 # ── smartcrate app data (local-only, never committed) ──────
-data/                 # SQLite database file(s)
-downloads/            # yt-dlp audio downloads
-config/seeds.json     # personal seed list (track config/seeds.example.json instead)
+# (git ignore patterns don't allow trailing inline comments)
+data/
+downloads/
+config/seeds.json
 
 # ── Python ─────────────────────────────────────────────────
 __pycache__/
