@@ -110,6 +110,26 @@ export interface DownloadItem {
   updatedAt: string;
 }
 
+// ── Track context (info panel) ───────────────────────────────────────────────
+
+/** An artist or label with its biography and links (for the info panel). */
+export interface EntityProfile {
+  id: number;
+  name: string;
+  bio: string;
+  urls: string[];
+}
+
+export interface TrackContext {
+  release: {
+    id: number;
+    title: string;
+    tracks: Array<{ position: string; title: string; isCurrent: boolean }>;
+  };
+  artists: EntityProfile[];
+  labels: EntityProfile[];
+}
+
 // ── Seed config (cold-start) ─────────────────────────────────────────────────
 
 export interface SeedConfig {

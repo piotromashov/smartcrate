@@ -5,6 +5,7 @@ import type {
   RecommendResult,
   RatingValue,
   Stats,
+  TrackContext,
 } from '@smartcrate/shared';
 
 export type RateAction = RatingValue | 'skip';
@@ -50,4 +51,8 @@ export function getDownloads(): Promise<DownloadItem[]> {
 
 export function getStats(): Promise<Stats> {
   return fetch('/api/stats').then((r) => json<Stats>(r));
+}
+
+export function getTrackContext(trackId: string): Promise<TrackContext> {
+  return fetch(`/api/tracks/${encodeURIComponent(trackId)}/context`).then((r) => json<TrackContext>(r));
 }

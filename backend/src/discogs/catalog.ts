@@ -1,4 +1,4 @@
-import type { Artist, Label, Release, Track } from '@smartcrate/shared';
+import type { Artist, Label, Release, Track, EntityProfile } from '@smartcrate/shared';
 import type { Db } from '../db/db';
 import { upsertArtist, upsertLabel, upsertRelease, upsertTrack } from '../db/repositories';
 import type { DiscogsClient } from './client';
@@ -119,6 +119,50 @@ export async function getRelease(
   const mapped = mapRelease(json);
   persist(db, mapped);
   return mapped;
+}
+
+/** Render Discogs profile markup to plain text. */
+export function stripDiscogsMarkup(profile: string): string {
+  return profile
+    .replace(/\[url=[^\]]*\]([\s\S]*?)\[\/url\]/gi, '$1') // [url=x]text[/url] → text
+    .replace(/\[[almr]=([^\]]+)\]/gi, '$1') // named refs [a=Luke Slater] → Luke Slater
+    .replace(/\[\/?(?:b|i|u)\]/gi, '') // bold/italic/underline tags
+    .replace(/\[[almr]\d+\]/gi, '') // numeric refs [a123]/[l123]/…
+    .replace(/\r\n/g, '\n')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+interface DiscogsEntityDetail {
+  id: number;
+  name: string;
+  profile?: string;
+  urls?: string[];
+}
+
+/** Fetch an entity's profile detail (bio + links), cache-first; also upsert id+name. */
+async function entityDetail(
+  client: DiscogsClient,
+  path: string,
+  upsert: (d: { id: number; name: string }) => void,
+): Promise<EntityProfile> {
+  const json = await client.get<DiscogsEntityDetail>(path);
+  upsert({ id: json.id, name: json.name });
+  return {
+    id: json.id,
+    name: json.name,
+    bio: json.profile ? stripDiscogsMarkup(json.profile) : '',
+    urls: json.urls ?? [],
+  };
+}
+
+export function getArtistDetail(client: DiscogsClient, db: Db, artistId: number): Promise<EntityProfile> {
+  return entityDetail(client, `/artists/${artistId}`, (d) => upsertArtist(db, d));
+}
+
+export function getLabelDetail(client: DiscogsClient, db: Db, labelId: number): Promise<EntityProfile> {
+  return entityDetail(client, `/labels/${labelId}`, (d) => upsertLabel(db, d));
 }
 
 export async function getArtist(client: DiscogsClient, db: Db, artistId: number): Promise<Artist> {

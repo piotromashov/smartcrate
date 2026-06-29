@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
-import type { PlayableTrack, UpNextItem, DownloadItem, Stats } from '@smartcrate/shared';
-import { getQueue, rate, undo, recommend, getDownloads, getStats } from './api';
+import type { PlayableTrack, UpNextItem, DownloadItem, Stats, TrackContext } from '@smartcrate/shared';
+import { getQueue, rate, undo, recommend, getDownloads, getStats, getTrackContext } from './api';
 import { useYouTubePlayer } from './youtube';
 import { StatsView } from './Stats';
+import { TrackInfoPanel } from './Info';
 
 type Status = 'idle' | 'loading' | 'playing' | 'empty' | 'exhausted' | 'seeding' | 'error';
 type Nav = { current: PlayableTrack | null; back: PlayableTrack[]; forward: PlayableTrack[] };
@@ -27,6 +28,9 @@ export function App() {
   const [lastRating, setLastRating] = useState<{ trackId: string; value: 'like' | 'dislike' } | null>(null);
   const [flash, setFlash] = useState<'like' | 'dislike' | null>(null);
   const [copied, setCopied] = useState(false);
+  const [info, setInfo] = useState<TrackContext | null>(null);
+  const [infoOpen, setInfoOpen] = useState(false);
+  const [infoLoading, setInfoLoading] = useState(false);
 
   const current = nav.current;
   const player = useYouTubePlayer(() => void skip()); // auto-advance on track end
@@ -43,6 +47,29 @@ export function App() {
     refreshStats();
     refreshDownloads();
   }, []);
+
+  // Reset the info panel when the track changes.
+  useEffect(() => {
+    setInfoOpen(false);
+    setInfo(null);
+  }, [current?.track.id]);
+
+  async function toggleInfo() {
+    if (infoOpen) {
+      setInfoOpen(false);
+      return;
+    }
+    setInfoOpen(true);
+    if (!info && current) {
+      setInfoLoading(true);
+      try {
+        setInfo(await getTrackContext(current.track.id));
+      } catch {
+        setInfo(null);
+      }
+      setInfoLoading(false);
+    }
+  }
 
   const refreshDownloads = () => void getDownloads().then(setDownloads).catch(() => undefined);
   const refreshStats = () => void getStats().then(setStats).catch(() => undefined);
@@ -224,6 +251,7 @@ export function App() {
               <button style={flash === 'dislike' ? s.dislikeFlash : s.dislike} onClick={() => void dislike()}>✕ Dislike</button>
               <button style={s.btn} onClick={() => void next()} title="Next / Skip">⏭</button>
               <button style={s.btn} onClick={() => void share()}>{copied ? '✓ Copied' : '⤴ Share'}</button>
+              <button style={infoOpen ? s.btnActive : s.btn} onClick={() => void toggleInfo()}>ⓘ Info</button>
               {lastRating && (
                 <button style={s.undo} onClick={() => void undoLast()}>↩ Undo {lastRating.value}</button>
               )}
@@ -231,6 +259,8 @@ export function App() {
           </>
         )}
       </section>
+
+      {started && infoOpen && <TrackInfoPanel ctx={info} loading={infoLoading} />}
 
       {started && upNext.length > 0 && (
         <section style={s.card}>
@@ -309,6 +339,7 @@ const s: Record<string, CSSProperties> = {
   reason: { color: C.muted, fontSize: 12, marginTop: 6 },
   controls: { display: 'flex', gap: 8, marginTop: 18, flexWrap: 'wrap', alignItems: 'center' },
   btn: ctrl,
+  btnActive: { ...ctrl, borderColor: C.accent, color: C.accent },
   like: { ...ctrl, padding: '10px 18px', background: C.accent, color: '#000', border: 'none', fontWeight: 700 },
   likeFlash: { ...ctrl, padding: '10px 18px', background: '#d4ff66', color: '#000', border: 'none', fontWeight: 700, transform: 'scale(1.06)' },
   dislike: { ...ctrl, background: 'transparent', color: C.red, border: `1px solid ${C.red}` },

@@ -7,6 +7,7 @@ import { listDownloads } from './downloads/queue';
 import { currentPlayable, upNext } from './playable';
 import { applyRating, undoRating, type RateAction } from './service';
 import { getStats } from './stats';
+import { trackContext } from './track-context';
 
 export interface AppDeps {
   db: Db;
@@ -59,6 +60,14 @@ export function buildApp(deps: AppDeps): FastifyInstance {
         .send({ error: 'DISCOGS_TOKEN is not configured; recommendation is unavailable.' });
     }
     return generateExploreQueue(db, client, config);
+  });
+
+  // Info panel: release tracklist + artist/label bios for a track.
+  app.get('/api/tracks/:trackId/context', async (req, reply) => {
+    if (!client) return reply.code(503).send({ error: 'DISCOGS_TOKEN is not configured.' });
+    const { trackId } = req.params as { trackId: string };
+    const context = await trackContext(db, client, trackId);
+    return context ?? reply.code(404).send({ error: 'Unknown track' });
   });
 
   app.get('/api/downloads', async () => listDownloads(db));
