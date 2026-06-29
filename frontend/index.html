@@ -18,6 +18,13 @@
       .sc-live { display: inline-block; width: 8px; height: 8px; border-radius: 50%;
                  background: #9fef00; margin-right: 8px; vertical-align: middle;
                  animation: sc-pulse 1.4s ease-in-out infinite; }
+      /* Crop-to-fill: square window; the 16:9 iframe is oversized + centered so
+         the centered square cover art fills the width and the black pillar bars
+         are clipped off-screen. */
+      .sc-player { position: relative; width: 100%; aspect-ratio: 1 / 1;
+                   overflow: hidden; border-radius: 10px; background: #000; }
+      .sc-player iframe { position: absolute; top: 0; left: -39%;
+                          width: 178%; height: 100%; }
     </style>
   </head>
   <body>

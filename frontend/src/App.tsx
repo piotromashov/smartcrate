@@ -111,7 +111,7 @@ export function App() {
       <section style={s.hero}>
         <div style={{ display: started ? 'block' : 'none' }}>
           <div style={s.playerWrap}>
-            <div ref={player.containerRef} style={s.player} />
+            <div ref={player.containerRef} className="sc-player" style={s.player} />
           </div>
         </div>
 
@@ -230,7 +230,7 @@ const s: Record<string, CSSProperties> = {
   card,
   hero: { ...card, padding: 20 },
   playerWrap: { maxWidth: 360, margin: '0 auto' },
-  player: { background: '#000', borderRadius: 10, overflow: 'hidden', border: `1px solid ${C.border}`, minHeight: 150 },
+  player: { border: `1px solid ${C.border}` },
   play: { fontFamily: MONO, fontSize: 18, padding: '12px 28px', cursor: 'pointer', borderRadius: 10, background: C.accent, color: '#000', border: 'none', fontWeight: 700 },
   title: { fontFamily: MONO, margin: '18px 0 6px', fontSize: 30, fontWeight: 700, lineHeight: 1.1 },
   meta: { color: C.text, fontSize: 14 },
