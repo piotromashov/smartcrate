@@ -34,6 +34,12 @@ export function rate(trackId: string, value: RateAction): Promise<{ current: Pla
   }).then((r) => json<{ current: PlayableTrack | null }>(r));
 }
 
+export function undo(trackId: string): Promise<{ current: PlayableTrack | null }> {
+  return fetch(`/api/tracks/${encodeURIComponent(trackId)}/undo`, { method: 'POST' }).then((r) =>
+    json<{ current: PlayableTrack | null }>(r),
+  );
+}
+
 export function recommend(): Promise<RecommendResult> {
   return fetch('/api/recommend', { method: 'POST' }).then((r) => json<RecommendResult>(r));
 }

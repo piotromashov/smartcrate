@@ -5,7 +5,7 @@ import type { DiscogsClient } from './discogs/client';
 import { generateExploreQueue } from './recommender/recommend';
 import { listDownloads } from './downloads/queue';
 import { currentPlayable, upNext } from './playable';
-import { applyRating, type RateAction } from './service';
+import { applyRating, undoRating, type RateAction } from './service';
 import { getStats } from './stats';
 
 export interface AppDeps {
@@ -43,6 +43,12 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     } catch (err) {
       return reply.code(404).send({ error: (err as Error).message });
     }
+  });
+
+  // Undo the track's most recent like/dislike (single-level).
+  app.post('/api/tracks/:trackId/undo', async (req) => {
+    const { trackId } = req.params as { trackId: string };
+    return { current: undoRating(db, config, trackId) };
   });
 
   // Trigger recommendation generation to (re)fill the explore queue.

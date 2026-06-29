@@ -108,3 +108,17 @@ export function isTrackRated(db: Db, trackId: string): boolean {
     .get(trackId);
   return row !== undefined;
 }
+
+/**
+ * Delete a track's most recent rating event (single-level undo) and return its
+ * value, or null if there was none. The only sanctioned removal from the
+ * otherwise append-only log; scores are recomputed by the caller.
+ */
+export function deleteLastRatingEvent(db: Db, trackId: string): RatingValue | null {
+  const row = db
+    .prepare(`SELECT id, value FROM rating_events WHERE track_id = ? ORDER BY id DESC LIMIT 1`)
+    .get(trackId) as { id: number; value: RatingValue } | undefined;
+  if (!row) return null;
+  db.prepare(`DELETE FROM rating_events WHERE id = ?`).run(row.id);
+  return row.value;
+}

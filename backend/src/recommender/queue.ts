@@ -43,6 +43,16 @@ export function enqueue(db: Db, item: ExploreQueueItem, source: CandidateSource 
   markSeen(db, item.trackId, source);
 }
 
+/** Re-insert a track at the front of the queue (used by undo-dislike to resume it). */
+export function enqueueFront(db: Db, item: ExploreQueueItem): void {
+  const row = db.prepare('SELECT MIN(position) AS m FROM explore_queue').get() as { m: number | null };
+  const position = (row.m ?? 0) - 1;
+  db.prepare(
+    `INSERT OR IGNORE INTO explore_queue (track_id, score, reason, position) VALUES (?, ?, ?, ?)`,
+  ).run(item.trackId, item.score, item.reason, position);
+  markSeen(db, item.trackId);
+}
+
 /** The current (front) item in the queue, or undefined when empty. */
 export function currentItem(db: Db): ExploreQueueItem | undefined {
   const row = db

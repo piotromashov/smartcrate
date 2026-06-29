@@ -82,6 +82,13 @@ export function markFailed(db: Db, id: number, error: string): void {
   setStatus(db, id, 'failed', { error });
 }
 
+/** Cancel a track's not-yet-completed download (undo-like). Leaves a 'done' item. */
+export function cancelDownload(db: Db, trackId: string): void {
+  db.prepare(
+    `DELETE FROM download_queue WHERE track_id = ? AND status IN ('queued','downloading')`,
+  ).run(trackId);
+}
+
 export function listDownloads(db: Db): DownloadItem[] {
   const rows = db
     .prepare('SELECT * FROM download_queue ORDER BY id DESC')

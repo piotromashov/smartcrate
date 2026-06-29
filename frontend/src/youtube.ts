@@ -6,6 +6,7 @@ interface YTPlayer {
   loadVideoById(videoId: string): void;
   playVideo(): void;
   pauseVideo(): void;
+  getCurrentTime(): number;
   destroy(): void;
 }
 interface YTStateEvent {
@@ -50,6 +51,7 @@ export interface PlayerHandle {
   load(videoId: string): void;
   play(): void;
   pause(): void;
+  getCurrentTime(): number;
 }
 
 /** Creates a single YouTube player inside a container div and reports track end. */
@@ -98,5 +100,6 @@ export function useYouTubePlayer(onEnded: () => void): PlayerHandle {
     load: (videoId) => playerRef.current?.loadVideoById(videoId),
     play: () => playerRef.current?.playVideo(),
     pause: () => playerRef.current?.pauseVideo(),
+    getCurrentTime: () => playerRef.current?.getCurrentTime() ?? 0,
   };
 }

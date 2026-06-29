@@ -1,36 +1,35 @@
 import { useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { PlayableTrack, UpNextItem, DownloadItem, Stats } from '@smartcrate/shared';
-import { getQueue, rate, recommend, getDownloads, getStats, type RateAction } from './api';
+import { getQueue, rate, undo, recommend, getDownloads, getStats } from './api';
 import { useYouTubePlayer } from './youtube';
 import { StatsView } from './Stats';
 
 type Status = 'idle' | 'loading' | 'playing' | 'empty' | 'exhausted' | 'seeding' | 'error';
+type Nav = { current: PlayableTrack | null; back: PlayableTrack[]; forward: PlayableTrack[] };
 
 const C = {
-  bg: '#0b0b0d',
-  panel: '#17171b',
-  border: '#2a2a30',
-  text: '#ececee',
-  muted: '#86868f',
-  accent: '#9fef00',
-  red: '#ff4d5e',
-  shadow: '0 6px 20px rgba(0,0,0,.45)',
+  bg: '#0b0b0d', panel: '#17171b', border: '#2a2a30', text: '#ececee',
+  muted: '#86868f', accent: '#9fef00', red: '#ff4d5e', shadow: '0 6px 20px rgba(0,0,0,.45)',
 };
 const MONO = 'ui-monospace, "SF Mono", Menlo, monospace';
 const PLACEHOLDER_REASON = 'seed/exploration';
 
 export function App() {
   const [started, setStarted] = useState(false);
-  const [current, setCurrent] = useState<PlayableTrack | null>(null);
+  const [nav, setNav] = useState<Nav>({ current: null, back: [], forward: [] });
   const [upNext, setUpNext] = useState<UpNextItem[]>([]);
   const [status, setStatus] = useState<Status>('idle');
   const [message, setMessage] = useState('');
   const [downloads, setDownloads] = useState<DownloadItem[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [paused, setPaused] = useState(false);
+  const [lastRating, setLastRating] = useState<{ trackId: string; value: 'like' | 'dislike' } | null>(null);
+  const [flash, setFlash] = useState<'like' | 'dislike' | null>(null);
+  const [copied, setCopied] = useState(false);
 
-  const player = useYouTubePlayer(() => void advance('skip'));
+  const current = nav.current;
+  const player = useYouTubePlayer(() => void skip()); // auto-advance on track end
 
   useEffect(() => {
     if (current?.track.youtubeVideoId && player.ready) {
@@ -47,50 +46,126 @@ export function App() {
 
   const refreshDownloads = () => void getDownloads().then(setDownloads).catch(() => undefined);
   const refreshStats = () => void getStats().then(setStats).catch(() => undefined);
+  const flashBtn = (k: 'like' | 'dislike') => {
+    setFlash(k);
+    setTimeout(() => setFlash(null), 350);
+  };
 
-  async function syncQueue(): Promise<PlayableTrack | null> {
+  /** Fetch the front-of-queue track, generating recommendations if empty. */
+  async function nextFromQueue(): Promise<PlayableTrack | null> {
     let state = await getQueue();
     if (!state.current) {
       const res = await recommend();
       if (res.seedingRequired) {
         setStatus('seeding');
-        setCurrent(null);
-        setUpNext([]);
         return null;
       }
       state = await getQueue();
     }
-    setCurrent(state.current);
     setUpNext(state.upNext);
     return state.current;
   }
+
+  /** Advance to a brand-new track: push current onto the back-stack, clear forward. */
+  const goTo = (t: PlayableTrack | null) =>
+    setNav((n) => (t ? { current: t, back: n.current ? [...n.back, n.current] : n.back, forward: [] } : n));
 
   async function start() {
     setStarted(true);
     setStatus('loading');
     setMessage('');
     try {
-      const next = await syncQueue();
-      setStatus((s) => (next ? 'playing' : s === 'seeding' ? s : 'empty'));
+      const t = await nextFromQueue();
+      if (t) {
+        goTo(t);
+        setStatus('playing');
+      } else setStatus((s) => (s === 'seeding' ? s : 'empty'));
     } catch (e) {
       setStatus('error');
       setMessage((e as Error).message);
     }
   }
 
-  async function advance(value: RateAction) {
-    const track = current?.track.id;
-    if (!track) return;
+  async function advanceToNext() {
     try {
-      await rate(track, value);
-      refreshDownloads();
-      refreshStats();
-      const next = await syncQueue();
-      setStatus((s) => (next ? 'playing' : s === 'seeding' ? s : 'exhausted'));
+      const t = await nextFromQueue();
+      if (t) {
+        goTo(t);
+        setStatus('playing');
+      } else setStatus((s) => (s === 'seeding' ? s : 'exhausted'));
     } catch (e) {
       setStatus('error');
       setMessage((e as Error).message);
     }
+  }
+
+  async function like() {
+    const id = current?.track.id;
+    if (!id) return;
+    flashBtn('like');
+    await rate(id, 'like'); // stays on the current track
+    setLastRating({ trackId: id, value: 'like' });
+    refreshDownloads();
+    refreshStats();
+  }
+
+  async function dislike() {
+    const id = current?.track.id;
+    if (!id) return;
+    flashBtn('dislike');
+    await rate(id, 'dislike');
+    setLastRating({ trackId: id, value: 'dislike' });
+    refreshStats();
+    await advanceToNext();
+  }
+
+  async function skip() {
+    const id = current?.track.id;
+    if (!id) return;
+    setLastRating(null); // transport, not a rating
+    await rate(id, 'skip');
+    await advanceToNext();
+  }
+
+  function back() {
+    setLastRating(null);
+    setNav((n) =>
+      n.back.length
+        ? { current: n.back[n.back.length - 1]!, back: n.back.slice(0, -1), forward: n.current ? [n.current, ...n.forward] : n.forward }
+        : n,
+    );
+  }
+
+  async function next() {
+    setLastRating(null);
+    if (nav.forward.length) {
+      setNav((n) => ({ current: n.forward[0]!, back: n.current ? [...n.back, n.current] : n.back, forward: n.forward.slice(1) }));
+    } else {
+      await skip(); // at the live edge → real skip
+    }
+  }
+
+  async function undoLast() {
+    if (!lastRating) return;
+    const { value, trackId } = lastRating;
+    const res = await undo(trackId);
+    refreshDownloads();
+    refreshStats();
+    if (value === 'dislike' && res.current) {
+      // bring the undone track back as current (the present track moves to forward)
+      setNav((n) => ({ current: res.current, back: n.back, forward: n.current ? [n.current, ...n.forward] : n.forward }));
+      setStatus('playing');
+    }
+    setLastRating(null);
+  }
+
+  async function share() {
+    const id = current?.track.youtubeVideoId;
+    if (!id) return;
+    const t = Math.floor(player.getCurrentTime());
+    await navigator.clipboard.writeText(`https://www.youtube.com/watch?v=${id}&t=${t}s`).catch(() => undefined);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
   }
 
   function togglePlay() {
@@ -115,10 +190,7 @@ export function App() {
           </div>
         </div>
 
-        {!started && (
-          <button style={s.play} onClick={() => void start()}>▶ Play</button>
-        )}
-
+        {!started && <button style={s.play} onClick={() => void start()}>▶ Play</button>}
         {started && status === 'loading' && <p style={s.muted}>Loading…</p>}
 
         {started && status === 'seeding' && (
@@ -127,14 +199,12 @@ export function App() {
             <button style={s.ghost} onClick={() => void start()}>Refill</button>.
           </p>
         )}
-
         {started && (status === 'empty' || status === 'exhausted') && (
           <p style={s.notice}>
             {status === 'exhausted' ? 'Queue exhausted.' : 'Nothing to play yet.'}{' '}
             <button style={s.ghost} onClick={() => void start()}>Refill</button>
           </p>
         )}
-
         {started && status === 'error' && <p style={{ color: C.red }}>Error: {message}</p>}
 
         {current && status === 'playing' && (
@@ -148,10 +218,15 @@ export function App() {
             {realReason && <div style={s.reason}>{realReason}</div>}
 
             <div style={s.controls}>
+              <button style={s.btn} onClick={back} disabled={nav.back.length === 0} title="Back">⏮</button>
               <button style={s.btn} onClick={togglePlay}>{paused ? '▶' : '⏸'}</button>
-              <button style={s.like} onClick={() => void advance('like')}>♥ Like</button>
-              <button style={s.dislike} onClick={() => void advance('dislike')}>✕ Dislike</button>
-              <button style={s.btn} onClick={() => void advance('skip')}>⏭ Skip</button>
+              <button style={flash === 'like' ? s.likeFlash : s.like} onClick={() => void like()}>♥ Like</button>
+              <button style={flash === 'dislike' ? s.dislikeFlash : s.dislike} onClick={() => void dislike()}>✕ Dislike</button>
+              <button style={s.btn} onClick={() => void next()} title="Next / Skip">⏭</button>
+              <button style={s.btn} onClick={() => void share()}>{copied ? '✓ Copied' : '⤴ Share'}</button>
+              {lastRating && (
+                <button style={s.undo} onClick={() => void undoLast()}>↩ Undo {lastRating.value}</button>
+              )}
             </div>
           </>
         )}
@@ -214,13 +289,9 @@ function fileName(d: DownloadItem): string {
 }
 
 const card: CSSProperties = {
-  background: C.panel,
-  border: `1px solid ${C.border}`,
-  borderRadius: 12,
-  padding: 16,
-  marginBottom: 14,
-  boxShadow: C.shadow,
+  background: C.panel, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16, marginBottom: 14, boxShadow: C.shadow,
 };
+const ctrl: CSSProperties = { padding: '10px 14px', cursor: 'pointer', borderRadius: 10, background: '#202027', color: C.text, border: `1px solid ${C.border}`, transition: 'all .12s' };
 
 const s: Record<string, CSSProperties> = {
   main: { maxWidth: 640, margin: '0 auto', padding: '24px 16px 64px', color: C.text },
@@ -236,10 +307,13 @@ const s: Record<string, CSSProperties> = {
   meta: { color: C.text, fontSize: 14 },
   va: { color: C.accent, fontWeight: 700, marginLeft: 4, fontFamily: MONO },
   reason: { color: C.muted, fontSize: 12, marginTop: 6 },
-  controls: { display: 'flex', gap: 8, marginTop: 18, flexWrap: 'wrap' },
-  btn: { padding: '10px 14px', cursor: 'pointer', borderRadius: 10, background: '#202027', color: C.text, border: `1px solid ${C.border}`, transition: 'background .15s' },
-  like: { padding: '10px 18px', cursor: 'pointer', borderRadius: 10, background: C.accent, color: '#000', border: 'none', fontWeight: 700 },
-  dislike: { padding: '10px 16px', cursor: 'pointer', borderRadius: 10, background: 'transparent', color: C.red, border: `1px solid ${C.red}` },
+  controls: { display: 'flex', gap: 8, marginTop: 18, flexWrap: 'wrap', alignItems: 'center' },
+  btn: ctrl,
+  like: { ...ctrl, padding: '10px 18px', background: C.accent, color: '#000', border: 'none', fontWeight: 700 },
+  likeFlash: { ...ctrl, padding: '10px 18px', background: '#d4ff66', color: '#000', border: 'none', fontWeight: 700, transform: 'scale(1.06)' },
+  dislike: { ...ctrl, background: 'transparent', color: C.red, border: `1px solid ${C.red}` },
+  dislikeFlash: { ...ctrl, background: C.red, color: '#fff', border: `1px solid ${C.red}`, transform: 'scale(1.06)' },
+  undo: { ...ctrl, color: C.muted, fontSize: 13 },
   h3: { margin: '0 0 12px', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1.5, color: C.muted },
   group: { marginBottom: 10 },
   groupArtist: { color: C.muted, fontSize: 12, marginBottom: 2 },

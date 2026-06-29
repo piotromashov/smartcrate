@@ -71,6 +71,40 @@ test('POST rate dislike advances past the track', async () => {
   await app.close();
 });
 
+test('undo-like removes the like, cancels the download, keeps the track current', async () => {
+  const db = openDb(':memory:');
+  seedQueue(db);
+  const app = buildApp({ db, config: makeConfig(), client: null });
+  await app.inject({ method: 'POST', url: '/api/tracks/t1/rate', payload: { value: 'like' } });
+  assert.equal((await app.inject({ method: 'GET', url: '/api/downloads' })).json().length, 1);
+
+  const undone = await app.inject({ method: 'POST', url: '/api/tracks/t1/undo' });
+  assert.equal(undone.json().current.track.id, 't1'); // still current
+  assert.equal((await app.inject({ method: 'GET', url: '/api/downloads' })).json().length, 0); // cancelled
+  await app.close();
+});
+
+test('undo-dislike re-surfaces the track as current', async () => {
+  const db = openDb(':memory:');
+  seedQueue(db);
+  const app = buildApp({ db, config: makeConfig(), client: null });
+  const rated = await app.inject({ method: 'POST', url: '/api/tracks/t1/rate', payload: { value: 'dislike' } });
+  assert.equal(rated.json().current, null); // advanced past t1
+
+  const undone = await app.inject({ method: 'POST', url: '/api/tracks/t1/undo' });
+  assert.equal(undone.json().current.track.id, 't1'); // brought back
+  await app.close();
+});
+
+test('undo with no rating is a no-op', async () => {
+  const db = openDb(':memory:');
+  seedQueue(db);
+  const app = buildApp({ db, config: makeConfig(), client: null });
+  const undone = await app.inject({ method: 'POST', url: '/api/tracks/t1/undo' });
+  assert.equal(undone.json().current.track.id, 't1'); // unchanged
+  await app.close();
+});
+
 test('GET /api/queue returns up-next items with score + artist/title', async () => {
   const db = openDb(':memory:');
   seedQueue(db);
