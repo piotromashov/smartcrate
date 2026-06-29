@@ -6,7 +6,7 @@ TBD - created by archiving change techno-curation-engine. Update Purpose after a
 ### Requirement: Auto-queue liked tracks for download
 
 The system SHALL automatically enqueue a track for local download when the user
-likes it.
+likes it, and SHALL cancel that download if the like is undone before it completes.
 
 #### Scenario: Like enqueues a download
 
@@ -21,6 +21,13 @@ likes it.
   or done
 - **WHEN** the user likes it again
 - **THEN** no duplicate download item is created
+
+#### Scenario: Undoing a like cancels its pending download
+
+- **GIVEN** a liked track whose download is queued or downloading (not yet done)
+- **WHEN** the user undoes the like
+- **THEN** that download item is removed
+- **AND** an already-completed download is left untouched
 
 ### Requirement: Local download processing via yt-dlp
 
