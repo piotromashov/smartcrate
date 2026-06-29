@@ -56,7 +56,7 @@ function bySource(db: Db): SourceStat[] {
 
   const totalLikes = rated.reduce((a, r) => a + r.likes, 0);
   const surfacedBy = new Map(surfaced.map((s) => [s.source, s.n]));
-  const sources: CandidateSource[] = ['discovery', 'sibling', 'seed'];
+  const sources: CandidateSource[] = ['discovery', 'sibling', 'explore', 'seed'];
 
   return sources
     .map((source): SourceStat => {

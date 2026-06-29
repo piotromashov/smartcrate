@@ -21,6 +21,7 @@ function makeConfig(over: Partial<Config> = {}): Config {
     exploreQueueTargetLength: 25,
     dislikeThreshold: 0,
     seeds: {},
+    exploration: { qMin: 0.15, qMax: 0.4, pFull: 12, labelCapFrac: 0.4, newReleaseBudget: 8, style: 'Techno' },
     ...over,
   };
 }
@@ -96,14 +97,14 @@ test('generates from positive entity scores, ranked with reasons', async () => {
   assert.equal(src('r101-0'), 'discovery');
 });
 
-test('seed fallback fills the queue when there is no rating signal', async () => {
+test('with no signal the queue fills from the explore lane (seeds), tagged explore', async () => {
   const db = openDb(':memory:');
   const res = await generateExploreQueue(db, client(RELEASES), makeConfig({ seeds: { labels: [10] } }));
   assert.equal(res.seedingRequired, undefined);
   assert.equal(res.added, 3); // r100-0, r100-1, r101-0 — all unrated/unseen/resolved
-  // seed-fallback run → every surfaced track tagged 'seed'
-  const seedCount = db.prepare("SELECT COUNT(*) AS n FROM seen_tracks WHERE source = 'seed'").get() as { n: number };
-  assert.equal(seedCount.n, 3);
+  // explore-lane candidates are tagged 'explore'
+  const exploreCount = db.prepare("SELECT COUNT(*) AS n FROM seen_tracks WHERE source = 'explore'").get() as { n: number };
+  assert.equal(exploreCount.n, 3);
 });
 
 // Records every fetched path; returns 404 for everything (no discovery, no re-fetch).
@@ -144,6 +145,41 @@ test('surfaces siblings of a positively-scored release without re-fetching it', 
   assert.ok(ids.includes('r200-1') && ids.includes('r200-2')); // siblings surfaced
   assert.ok(!ids.includes('r200-0')); // the rated track is excluded
   assert.ok(!calls.some((p) => p.includes('/releases/200'))); // sourced from DB, not re-fetched
+});
+
+test('diversity fill + explore lane break the single-artist monoculture', async () => {
+  const db = openDb(':memory:');
+  // Dominant: 10 PAS tracks on Ostgut, all positively scored (the filter-bubble setup).
+  upsertArtist(db, { id: 1, name: 'PAS' });
+  upsertLabel(db, { id: 10, name: 'Ostgut' });
+  upsertRelease(db, { id: 100, title: 'R100', labelIds: [10], artistIds: [1], isVa: false });
+  for (let i = 0; i < 10; i++) {
+    upsertTrack(db, { id: `r100-${i}`, releaseId: 100, title: `T${i}`, position: `A${i}`, artistIds: [1], youtubeVideoId: `v${i}`, unresolved: false });
+  }
+  db.exec("INSERT INTO entity_scores (kind, entity_id, score) VALUES ('artist','1',7),('label','10',7),('release','100',7)");
+
+  // Explore content: a seed label (Token) with a 5-track release, no signal.
+  const bodies = {
+    '/labels/20/releases': { releases: [{ id: 200 }] },
+    '/releases/200': {
+      id: 200,
+      title: 'R200',
+      labels: [{ id: 20, name: 'Token' }],
+      artists: [{ id: 2, name: 'Other' }],
+      tracklist: Array.from({ length: 5 }, (_, i) => ({ position: `A${i}`, title: `S${i}`, type_: 'track' })),
+      videos: Array.from({ length: 5 }, (_, i) => ({ uri: `https://youtu.be/s${i}` })),
+    },
+    '/database/search': { results: [] },
+  };
+  await generateExploreQueue(db, client(bodies), makeConfig({ seeds: { labels: [20] } }));
+
+  const ids = getQueue(db).map((it) => it.trackId);
+  const pas = ids.filter((id) => id.startsWith('r100-')).length;
+  const explore = ids.filter((id) => id.startsWith('r200-')).length;
+  assert.ok(pas > 0 && explore > 0, 'queue mixes exploit and explore (not a monoculture)');
+  assert.ok(pas <= 10, 'Ostgut is held under the per-label cap');
+  const exploreTagged = db.prepare("SELECT COUNT(*) AS n FROM seen_tracks WHERE source = 'explore'").get() as { n: number };
+  assert.ok(exploreTagged.n >= 1, 'explore-lane tracks are tagged explore');
 });
 
 test('a release whose score dropped to <= 0 does not surface siblings', async () => {

@@ -34,6 +34,22 @@ export interface Config {
   /** An entity is treated as "disliked" when its score is at or below this. */
   dislikeThreshold: number;
   seeds: SeedConfig;
+  exploration: Exploration;
+}
+
+/** Explore/exploit + diversity tunables (ADR-0006). */
+export interface Exploration {
+  /** Explore-share floor / ceiling. */
+  qMin: number;
+  qMax: number;
+  /** Number of distinct positive entities at which explore reaches its floor. */
+  pFull: number;
+  /** Max fraction of a lane any single label may fill. */
+  labelCapFrac: number;
+  /** Max genuinely-new releases fetched from Discogs per run. */
+  newReleaseBudget: number;
+  /** Discogs style searched for genuinely-new releases. */
+  style: string;
 }
 
 function loadSeeds(path: string): SeedConfig {
@@ -77,6 +93,14 @@ export function loadConfig(): Config {
     exploreQueueTargetLength: num(env.SMARTCRATE_EXPLORE_QUEUE_LENGTH, 25),
     dislikeThreshold: num(env.SMARTCRATE_DISLIKE_THRESHOLD, 0),
     seeds: loadSeeds(str(env.SMARTCRATE_SEED_CONFIG) ?? join(REPO_ROOT, 'config/seeds.json')),
+    exploration: {
+      qMin: num(env.SMARTCRATE_EXPLORE_Q_MIN, 0.15),
+      qMax: num(env.SMARTCRATE_EXPLORE_Q_MAX, 0.4),
+      pFull: num(env.SMARTCRATE_EXPLORE_P_FULL, 12),
+      labelCapFrac: num(env.SMARTCRATE_LABEL_CAP_FRAC, 0.4),
+      newReleaseBudget: num(env.SMARTCRATE_NEW_RELEASE_BUDGET, 8),
+      style: str(env.SMARTCRATE_EXPLORE_STYLE) ?? 'Techno',
+    },
   };
 }
 

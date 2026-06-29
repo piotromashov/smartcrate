@@ -70,8 +70,11 @@ export interface ExploreQueueItem {
   reason: string;
 }
 
-/** Which path first surfaced a track into the explore queue (recorded first-touch). */
-export type CandidateSource = 'discovery' | 'sibling' | 'seed';
+/**
+ * Which path first surfaced a track into the explore queue (recorded first-touch).
+ * `seed` is legacy (cold-start fallback before the explore lane existed).
+ */
+export type CandidateSource = 'discovery' | 'sibling' | 'explore' | 'seed';
 
 /** Lightweight display info for an upcoming queued track (the up-next list). */
 export interface UpNextItem {

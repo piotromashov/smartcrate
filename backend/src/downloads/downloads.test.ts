@@ -21,6 +21,7 @@ function makeConfig(): Config {
     exploreQueueTargetLength: 25,
     dislikeThreshold: 0,
     seeds: {},
+    exploration: { qMin: 0.15, qMax: 0.4, pFull: 12, labelCapFrac: 0.4, newReleaseBudget: 8, style: 'Techno' },
   };
 }
 

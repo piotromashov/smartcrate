@@ -161,6 +161,18 @@ export async function discoverReleaseIdsByArtist(
   return (page.releases ?? []).filter((r) => (r.type ?? 'release') === 'release').map((r) => r.id);
 }
 
+/** Discover release ids by musical style (e.g. 'Techno') for explore-lane novelty. */
+export async function discoverNewReleaseIdsByStyle(
+  client: DiscogsClient,
+  style: string,
+): Promise<number[]> {
+  const res = await client.get<{ results?: Array<{ id: number; type?: string }> }>(
+    '/database/search',
+    { type: 'release', style, per_page: 50 },
+  );
+  return (res.results ?? []).filter((r) => (r.type ?? 'release') === 'release').map((r) => r.id);
+}
+
 function persist(db: Db, mapped: MappedRelease): void {
   for (const a of mapped.artists) upsertArtist(db, a);
   for (const l of mapped.labels) upsertLabel(db, l);

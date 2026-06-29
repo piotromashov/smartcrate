@@ -7,6 +7,7 @@ import {
   getRelease,
   youtubeIdFromUri,
   discoverReleaseIdsByLabel,
+  discoverNewReleaseIdsByStyle,
 } from './catalog';
 
 function stubFetch(bodyByPath: Record<string, unknown>, calls: string[]): typeof fetch {
@@ -80,6 +81,21 @@ test('getRelease maps VA + resolves videos by index, and caches', async () => {
   // second call served from cache (no extra network)
   await getRelease(client, db, 100);
   assert.equal(calls.length, 1);
+});
+
+test('style search returns release ids (filtering non-release results)', async () => {
+  const calls: string[] = [];
+  const client = new DiscogsClient({
+    token: 't',
+    cache: memoryCache(),
+    intervalMs: 0,
+    fetchImpl: stubFetch(
+      { '/database/search': { results: [{ id: 1, type: 'release' }, { id: 2, type: 'release' }, { id: 3, type: 'master' }] } },
+      calls,
+    ),
+  });
+  const ids = await discoverNewReleaseIdsByStyle(client, 'Techno');
+  assert.deepEqual(ids, [1, 2]); // master filtered out
 });
 
 test('discovery returns release ids', async () => {
