@@ -1,30 +1,30 @@
 ## 1. Theme foundation
 
-- [ ] 1.1 Centralize the palette + surface tokens (bg, panel, border, text, muted, accent, red, shadow) and the two font families (mono for titles/data, sans for labels/body) in one constants block
-- [ ] 1.2 `index.html`: set the sans font stack + dark bg globally
+- [x] 1.1 Centralize the palette + surface tokens and the two font families (mono for titles/data, sans for labels/body)
+- [x] 1.2 `index.html`: sans font stack + dark bg globally (+ a live-pulse keyframe)
 
 ## 2. Player & layout
 
-- [ ] 2.1 Narrow-and-center the player (~360px max-width, centered), rounded with a subtle inner border
-- [ ] 2.2 Lift the cards (panel/border/shadow per design); give the now-playing card hero emphasis; tighten overall spacing into a tracklist rhythm
+- [x] 2.1 Narrow-and-center the player (~360px max-width), rounded with a subtle border
+- [x] 2.2 Lift the cards (panel/border/shadow); now-playing as the hero; tighter spacing
 
 ## 3. Now-playing & accent
 
-- [ ] 3.1 Now-playing hierarchy: title ~30px/700 mono with breathing room; artist/label secondary (sans)
-- [ ] 3.2 Hide the reason line when it's the `seed/exploration` cold-start placeholder; show real reasons otherwise
-- [ ] 3.3 Accent discipline: green only on Like / live / positive; restyle controls accordingly
+- [x] 3.1 Now-playing hierarchy: title ~30px/700 mono with a live dot; artist/label secondary (sans)
+- [x] 3.2 Hide the reason line when it's the `seed/exploration` cold-start placeholder
+- [x] 3.3 Accent discipline: green only on Like / live / positive scores
 
 ## 4. Up-next (spec rules)
 
-- [ ] 4.1 Group consecutive same-artist upcoming tracks under a single artist heading; titles + scores beneath
-- [ ] 4.2 Render a score of 0 as a neutral `—` (not a green 0.0); dim non-top scores
+- [x] 4.1 Group consecutive same-artist upcoming tracks under a single artist heading
+- [x] 4.2 Render a score of 0 as a neutral `—` (not a green 0.0)
 
 ## 5. Stats restyle
 
-- [ ] 5.1 `Stats.tsx`: sans body/labels, restrained accent (keep the contribution-not-lift caveat); fit the lifted-card look inline
+- [x] 5.1 `Stats.tsx`: sans body (inherited), mono/tabular headline number, restrained accent (caveat kept)
 
 ## 6. Verify
 
-- [ ] 6.1 `npm run typecheck` + `frontend` build pass; `npm test --workspace backend` unaffected (still green)
-- [ ] 6.2 Visual check in the running app: framed player (no void), distinct cards, grouped up-next with `—` zeros, hero title, no debug reason string
-- [ ] 6.3 `openspec validate curation-ui-refresh --type change --strict`
+- [x] 6.1 `npm run typecheck` + `frontend` build pass; `npm test --workspace backend` still green (29)
+- [x] 6.2 Live via HMR in the running app for visual confirmation (framed player, lifted cards, grouped up-next with `—`, hero title, no debug reason) — user to eyeball
+- [x] 6.3 `openspec validate curation-ui-refresh --type change --strict`

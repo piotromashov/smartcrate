@@ -6,8 +6,18 @@
     <title>smartcrate</title>
     <style>
       :root { color-scheme: dark; }
-      html, body { margin: 0; background: #0b0b0d; color: #ececee; }
+      html, body {
+        margin: 0;
+        background: #0b0b0d;
+        color: #ececee;
+        font-family: system-ui, "Inter", -apple-system, sans-serif;
+      }
       * { box-sizing: border-box; }
+      button { font-family: inherit; }
+      @keyframes sc-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
+      .sc-live { display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+                 background: #9fef00; margin-right: 8px; vertical-align: middle;
+                 animation: sc-pulse 1.4s ease-in-out infinite; }
     </style>
   </head>
   <body>

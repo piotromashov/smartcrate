@@ -9,13 +9,16 @@ type Status = 'idle' | 'loading' | 'playing' | 'empty' | 'exhausted' | 'seeding'
 
 const C = {
   bg: '#0b0b0d',
-  panel: '#141417',
-  border: '#26262b',
+  panel: '#17171b',
+  border: '#2a2a30',
   text: '#ececee',
   muted: '#86868f',
-  accent: '#9fef00', // acid techno green, used sparingly
+  accent: '#9fef00',
   red: '#ff4d5e',
+  shadow: '0 6px 20px rgba(0,0,0,.45)',
 };
+const MONO = 'ui-monospace, "SF Mono", Menlo, monospace';
+const PLACEHOLDER_REASON = 'seed/exploration';
 
 export function App() {
   const [started, setStarted] = useState(false);
@@ -27,9 +30,8 @@ export function App() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [paused, setPaused] = useState(false);
 
-  const player = useYouTubePlayer(() => void advance('skip')); // auto-advance on track end
+  const player = useYouTubePlayer(() => void advance('skip'));
 
-  // Reload the embedded video only when the current track id changes.
   useEffect(() => {
     if (current?.track.youtubeVideoId && player.ready) {
       player.load(current.track.youtubeVideoId);
@@ -38,7 +40,6 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current?.track.id, player.ready]);
 
-  // Stats + downloads load once on mount.
   useEffect(() => {
     refreshStats();
     refreshDownloads();
@@ -47,7 +48,6 @@ export function App() {
   const refreshDownloads = () => void getDownloads().then(setDownloads).catch(() => undefined);
   const refreshStats = () => void getStats().then(setStats).catch(() => undefined);
 
-  // Sync current + up-next from the backend, refilling via recommend if empty.
   async function syncQueue(): Promise<PlayableTrack | null> {
     let state = await getQueue();
     if (!state.current) {
@@ -82,7 +82,7 @@ export function App() {
     const track = current?.track.id;
     if (!track) return;
     try {
-      await rate(track, value); // like keeps the current track; dislike/skip advance
+      await rate(track, value);
       refreshDownloads();
       refreshStats();
       const next = await syncQueue();
@@ -99,6 +99,8 @@ export function App() {
     setPaused(!paused);
   }
 
+  const realReason = current && current.reason !== PLACEHOLDER_REASON ? current.reason : '';
+
   return (
     <main style={s.main}>
       <header style={s.header}>
@@ -106,15 +108,15 @@ export function App() {
         <span style={s.tagline}>techno curation</span>
       </header>
 
-      <section style={s.card}>
+      <section style={s.hero}>
         <div style={{ display: started ? 'block' : 'none' }}>
-          <div ref={player.containerRef} style={s.player} />
+          <div style={s.playerWrap}>
+            <div ref={player.containerRef} style={s.player} />
+          </div>
         </div>
 
         {!started && (
-          <button style={s.play} onClick={() => void start()}>
-            ▶ Play
-          </button>
+          <button style={s.play} onClick={() => void start()}>▶ Play</button>
         )}
 
         {started && status === 'loading' && <p style={s.muted}>Loading…</p>}
@@ -137,13 +139,13 @@ export function App() {
 
         {current && status === 'playing' && (
           <>
-            <h2 style={s.title}>{current.track.title}</h2>
+            <h2 style={s.title}><span className="sc-live" />{current.track.title}</h2>
             <div style={s.meta}>
               {current.artists.map((a) => a.name).join(', ') || 'Unknown artist'}
               {current.labels.length > 0 && <> · {current.labels.map((l) => l.name).join(', ')}</>}
               {current.release.isVa && <span style={s.va}> VA</span>}
             </div>
-            <div style={s.reason}>{current.reason}</div>
+            {realReason && <div style={s.reason}>{realReason}</div>}
 
             <div style={s.controls}>
               <button style={s.btn} onClick={togglePlay}>{paused ? '▶' : '⏸'}</button>
@@ -158,30 +160,29 @@ export function App() {
       {started && upNext.length > 0 && (
         <section style={s.card}>
           <h3 style={s.h3}>Up next</h3>
-          <ol style={s.upNext}>
-            {upNext.slice(0, 12).map((u) => (
-              <li key={u.trackId} style={s.upRow}>
-                <span style={s.upText}>
-                  <span style={s.muted}>{u.artists.join(', ') || '—'}</span> · {u.title}
-                </span>
-                <span style={s.score}>{u.score.toFixed(1)}</span>
-              </li>
-            ))}
-          </ol>
+          {groupByArtist(upNext.slice(0, 16)).map((g, gi) => (
+            <div key={gi} style={s.group}>
+              <div style={s.groupArtist}>{g.artist}</div>
+              {g.tracks.map((t) => (
+                <div key={t.trackId} style={s.upRow}>
+                  <span style={s.upTitle}>{t.title}</span>
+                  <Score n={t.score} />
+                </div>
+              ))}
+            </div>
+          ))}
         </section>
       )}
 
       {downloads.length > 0 && (
         <section style={s.card}>
           <h3 style={s.h3}>Downloads</h3>
-          <ul style={{ margin: 0, paddingLeft: 0, listStyle: 'none' }}>
-            {downloads.slice(0, 8).map((d) => (
-              <li key={d.id} style={s.dlRow}>
-                <span style={s.upText}>{fileName(d)}</span>
-                <span style={d.status === 'failed' ? { color: C.red } : s.muted}>{d.status}</span>
-              </li>
-            ))}
-          </ul>
+          {downloads.slice(0, 8).map((d) => (
+            <div key={d.id} style={s.dlRow}>
+              <span style={s.upTitle}>{fileName(d)}</span>
+              <span style={d.status === 'failed' ? { color: C.red } : s.muted}>{d.status}</span>
+            </div>
+          ))}
         </section>
       )}
 
@@ -193,34 +194,61 @@ export function App() {
   );
 }
 
-function fileName(d: DownloadItem): string {
-  if (d.filePath) return d.filePath.split('/').pop() ?? d.trackId;
-  return d.trackId;
+function Score({ n }: { n: number }) {
+  return n > 0 ? <span style={s.score}>{n.toFixed(1)}</span> : <span style={s.scoreZero}>—</span>;
 }
 
+function groupByArtist(items: UpNextItem[]): Array<{ artist: string; tracks: UpNextItem[] }> {
+  const groups: Array<{ artist: string; tracks: UpNextItem[] }> = [];
+  for (const it of items) {
+    const artist = it.artists.join(', ') || '—';
+    const last = groups[groups.length - 1];
+    if (last && last.artist === artist) last.tracks.push(it);
+    else groups.push({ artist, tracks: [it] });
+  }
+  return groups;
+}
+
+function fileName(d: DownloadItem): string {
+  return d.filePath ? (d.filePath.split('/').pop() ?? d.trackId) : d.trackId;
+}
+
+const card: CSSProperties = {
+  background: C.panel,
+  border: `1px solid ${C.border}`,
+  borderRadius: 12,
+  padding: 16,
+  marginBottom: 14,
+  boxShadow: C.shadow,
+};
+
 const s: Record<string, CSSProperties> = {
-  main: { fontFamily: 'ui-monospace, "SF Mono", Menlo, monospace', maxWidth: 640, margin: '0 auto', padding: '24px 16px 64px', color: C.text },
+  main: { maxWidth: 640, margin: '0 auto', padding: '24px 16px 64px', color: C.text },
   header: { display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 20 },
-  logo: { fontSize: 22, fontWeight: 700, letterSpacing: 1 },
-  tagline: { color: C.muted, fontSize: 12, textTransform: 'uppercase', letterSpacing: 2 },
-  card: { background: C.panel, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, marginBottom: 14 },
-  player: { background: '#000', borderRadius: 8, overflow: 'hidden', minHeight: 160 },
-  play: { fontSize: 18, padding: '12px 28px', cursor: 'pointer', borderRadius: 8, background: C.accent, color: '#000', border: 'none', fontWeight: 700 },
-  title: { margin: '14px 0 4px', fontSize: 20 },
+  logo: { fontFamily: MONO, fontSize: 22, fontWeight: 700, letterSpacing: 1 },
+  tagline: { color: C.muted, fontSize: 11, textTransform: 'uppercase', letterSpacing: 2 },
+  card,
+  hero: { ...card, padding: 20 },
+  playerWrap: { maxWidth: 360, margin: '0 auto' },
+  player: { background: '#000', borderRadius: 10, overflow: 'hidden', border: `1px solid ${C.border}`, minHeight: 150 },
+  play: { fontFamily: MONO, fontSize: 18, padding: '12px 28px', cursor: 'pointer', borderRadius: 10, background: C.accent, color: '#000', border: 'none', fontWeight: 700 },
+  title: { fontFamily: MONO, margin: '18px 0 6px', fontSize: 30, fontWeight: 700, lineHeight: 1.1 },
   meta: { color: C.text, fontSize: 14 },
-  va: { color: C.accent, fontWeight: 700, marginLeft: 4 },
-  reason: { color: C.muted, fontSize: 12, marginTop: 4 },
-  controls: { display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' },
-  btn: { padding: '10px 14px', cursor: 'pointer', borderRadius: 8, background: '#1f1f25', color: C.text, border: `1px solid ${C.border}` },
-  like: { padding: '10px 16px', cursor: 'pointer', borderRadius: 8, background: C.accent, color: '#000', border: 'none', fontWeight: 700 },
-  dislike: { padding: '10px 16px', cursor: 'pointer', borderRadius: 8, background: 'transparent', color: C.red, border: `1px solid ${C.red}` },
-  h3: { margin: '0 0 10px', fontSize: 13, textTransform: 'uppercase', letterSpacing: 1.5, color: C.muted },
-  upNext: { margin: 0, padding: 0, listStyle: 'none' },
-  upRow: { display: 'flex', justifyContent: 'space-between', gap: 12, padding: '6px 0', borderBottom: `1px solid ${C.border}`, fontSize: 13 },
+  va: { color: C.accent, fontWeight: 700, marginLeft: 4, fontFamily: MONO },
+  reason: { color: C.muted, fontSize: 12, marginTop: 6 },
+  controls: { display: 'flex', gap: 8, marginTop: 18, flexWrap: 'wrap' },
+  btn: { padding: '10px 14px', cursor: 'pointer', borderRadius: 10, background: '#202027', color: C.text, border: `1px solid ${C.border}`, transition: 'background .15s' },
+  like: { padding: '10px 18px', cursor: 'pointer', borderRadius: 10, background: C.accent, color: '#000', border: 'none', fontWeight: 700 },
+  dislike: { padding: '10px 16px', cursor: 'pointer', borderRadius: 10, background: 'transparent', color: C.red, border: `1px solid ${C.red}` },
+  h3: { margin: '0 0 12px', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1.5, color: C.muted },
+  group: { marginBottom: 10 },
+  groupArtist: { color: C.muted, fontSize: 12, marginBottom: 2 },
+  upRow: { display: 'flex', justifyContent: 'space-between', gap: 12, padding: '4px 0 4px 12px', fontSize: 13 },
+  upTitle: { fontFamily: MONO, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
   dlRow: { display: 'flex', justifyContent: 'space-between', gap: 12, padding: '5px 0', fontSize: 13 },
-  upText: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-  score: { color: C.accent, fontVariantNumeric: 'tabular-nums' },
+  score: { fontFamily: MONO, color: C.accent, fontVariantNumeric: 'tabular-nums' },
+  scoreZero: { fontFamily: MONO, color: C.muted, fontVariantNumeric: 'tabular-nums' },
   muted: { color: C.muted },
-  notice: { background: '#1b1b20', padding: 12, borderRadius: 8, color: C.text, fontSize: 13 },
-  ghost: { marginLeft: 6, padding: '4px 10px', cursor: 'pointer', background: 'transparent', color: C.accent, border: `1px solid ${C.accent}`, borderRadius: 6 },
+  notice: { background: '#1f1f25', padding: 12, borderRadius: 10, color: C.text, fontSize: 13 },
+  ghost: { marginLeft: 6, padding: '4px 10px', cursor: 'pointer', background: 'transparent', color: C.accent, border: `1px solid ${C.accent}`, borderRadius: 8 },
 };

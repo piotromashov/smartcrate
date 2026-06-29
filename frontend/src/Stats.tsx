@@ -105,8 +105,8 @@ const BORDER = '#26262b';
 const s: Record<string, CSSProperties> = {
   panel: { padding: '10px 0', marginBottom: 10, borderBottom: `1px solid ${BORDER}` },
   h: { margin: '0 0 8px', fontSize: 12, textTransform: 'uppercase', letterSpacing: 1, color: MUTED },
-  big: { fontSize: 32, fontWeight: 700, color: '#ececee' },
-  spark: { fontSize: 20, letterSpacing: 1, fontFamily: 'monospace', color: ACCENT },
+  big: { fontSize: 32, fontWeight: 700, color: '#ececee', fontFamily: 'ui-monospace, Menlo, monospace', fontVariantNumeric: 'tabular-nums' },
+  spark: { fontSize: 20, letterSpacing: 1, fontFamily: 'ui-monospace, Menlo, monospace', color: ACCENT },
   sub: { color: MUTED, fontSize: 13 },
   caveat: { color: '#b59f5b', fontSize: 12, marginTop: 8, lineHeight: 1.4 },
   table: { borderCollapse: 'collapse', width: '100%', fontSize: 13 },
