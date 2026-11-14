@@ -22,6 +22,11 @@
 
 Newest first. One entry per decision: date, what was decided, why.
 
+- **2026-11-14 — Agent provenance on PRs and reviews.** Claude Code and Codex
+  declare their contribution in the PR or review body. A shared workflow in
+  `piotromashov/agentic-template` applies `authored-with:*` and
+  `reviewed-with:*` labels. GitHub still shows the authenticated account;
+  commit co-author trailers remain disabled.
 - **2026-06-26 — Adopted the `intent-driven` OpenSpec framework (Claude Code
   port).** Switched the project default schema from `spec-driven` to
   `intent-driven` (`openspec/config.yaml`): artifact chain **proposal → specs →
